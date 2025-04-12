@@ -1,0 +1,27 @@
+name: Sync Journal Entry
+
+on:
+  push:
+    paths:
+      - 'pending-save.txt'
+
+jobs:
+  save-journal:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Save journal to dated file
+        run: |
+          DATE=$(date -u +"%Y-%m-%d")
+          mkdir -p journals
+          cp pending-save.txt journals/journal-$DATE.html
+          
+      - name: Commit and Push Update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add journals/journal-*.html
+          git commit -m "Auto-save journal for $DATE"
+          git push

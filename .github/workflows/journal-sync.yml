@@ -1,27 +1,27 @@
-name: Sync Journal Entry
+name: Save Journal Entry
 
 on:
-  push:
-    paths:
-      - 'pending-save.txt'
+  repository_dispatch:
+    types: [save-journal]
 
 jobs:
-  save-journal:
+  save:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-      - name: Save journal to dated file
+      - name: Decode and write journal
         run: |
-          DATE=$(date -u +"%Y-%m-%d")
           mkdir -p journals
-          cp pending-save.txt journals/journal-$DATE.html
-          
-      - name: Commit and Push Update
+          echo "${{ github.event.client_payload.content }}" | base64 -d > journals/journal-${{ github.event.client_payload.date }}.html
+
+      - name: Commit journal
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add journals/journal-*.html
-          git commit -m "Auto-save journal for $DATE"
+          git config user.name "Auto Journal Bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add journals/
+          git commit -m "\ud83d\udcd3 Save journal for ${{ github.event.client_payload.date }}"
           git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

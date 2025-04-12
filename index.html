@@ -2,26 +2,127 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Bullet Journal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bullet Journal</title>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
   <style>
     html, body {
       font-family: 'IBM Plex Mono', monospace;
       text-transform: uppercase;
-      margin: 0; padding: 0;
-      width: 100%; height: 100%;
-      background: #fafafa;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    body {
+      display: flex;
+      align-items: flex-start;
+      padding: 0;
+    }
+
+    #wrapper {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 40px 0;
+      width: 100%;
+    }
+
+    .panel {
+      width: 220px;
+      flex-shrink: 0;
+      background: white;
+      padding: 28px;
+      margin-right: min(5vw, 64px);
     }
 
     #journal-panel {
+      flex-grow: 1;
+      max-width: calc(100% - 220px - min(5vw, 64px));
+      display: flex;
+      flex-direction: column;
       padding: 40px;
+      background: #fafafa;
+      opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+    }
+
+    #journal-panel.visible { opacity: 1; }
+
+    .card {
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      padding: 18px 16px;
+    }
+
+    .card h2 {
+      font-size: 0.75rem;
+      margin: 0 0 12px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 6px;
+      font-weight: 700;
+      color: #222;
+    }
+
+    .card .item {
+      font-size: 0.75rem;
+      letter-spacing: 0.03em;
+      cursor: pointer;
+      margin-bottom: 8px;
+      transition: opacity 0.2s;
+    }
+
+    .card .item:hover { opacity: 0.6; }
+    .card button { display: none; }
+
+    .add-collection-link {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      margin-top: -9px;
+      margin-bottom: 8px;
+      color: #000;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    #collection-popup {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    #collection-popup input {
+      width: 100%;
+      padding: 6px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.75rem;
+      text-transform: none;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 20px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: #333;
     }
 
     .notes[contenteditable="true"] {
       outline: none;
+      flex-grow: 1;
       font-size: 0.85rem;
-      line-heit: 1.8;
+      line-height: 1.9;
       letter-spacing: 0.04em;
       color: #111;
     }
@@ -61,87 +162,170 @@
   </style>
 </head>
 <body>
-  <div id="journal-panel">
-    <div class="notes" id="journal-content" contenteditable="true"></div>
+  <div id="wrapper">
+    <div class="panel">
+      <div class="card" id="index-card"><h2>INDEX</h2></div>
+      <div class="card" id="collections-card">
+        <h2>COLLECTIONS</h2>
+        <span class="add-collection-link" onclick="toggleCollectionPopup()">+ ADD COLLECTION</span>
+        <div id="collection-popup">
+          <input type="text" id="new-collection-name" placeholder="Collection name">
+          <button onclick="createCollection()">Save</button>
+        </div>
+        <div id="collections-list">
+          <div class="item" data-collection="goals">🎯 GOALS</div>
+          <div class="item" data-collection="quotes">💬 QUOTES</div>
+          <div class="item" data-collection="books">📚 BOOKS</div>
+        </div>
+      </div>
+    </div>
+    <div id="journal-panel">
+      <div class="header">
+        <div id="entry-title">DAILY LOG</div>
+        <div id="entry-date">TODAY</div>
+      </div>
+      <div class="notes" id="journal-content" contenteditable="true"></div>
+    </div>
   </div>
 
   <script>
-    const token = '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'; // 🔒 TEMP ONLY — replace with your token
-    const repo = 'lebron1212/bulletjournal';
-    const branch = 'main';
-    const pendingPath = 'pending-save.txt';
-
+  document.addEventListener("DOMContentLoaded", () => {
     const content = document.getElementById("journal-content");
+    const title = document.getElementById("entry-title");
+    const dateLabel = document.getElementById("entry-date");
+    const indexCard = document.getElementById("index-card");
+    const collectionsList = document.getElementById("collections-list");
+    const popup = document.getElementById("collection-popup");
 
-    function getTodayKey() {
-      return `journal-${new Date().toISOString().slice(0, 10)}.html`;
+    let currentKey = `journal-${new Date().toISOString().slice(0, 10)}`;
+
+    function saveContent() {
+      const token = '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'; // ← Replace with your real token
+      const repo = 'lebron1212/bulletjournal';
+      const branch = 'main';
+      const path = 'pending-save.txt';
+      const message = 'Auto-save journal entry';
+
+      const contentToSave = content.innerHTML;
+      const encodedContent = btoa(unescape(encodeURIComponent(contentToSave)));
+
+      fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `token ${token}`,
+          'Accept': 'application/vnd.github.v3+json'
+        }
+      })
+      .then(res => res.ok ? res.json() : Promise.resolve({ sha: undefined }))
+      .then(({ sha }) => {
+        return fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
+          method: 'PUT',
+          headers: {
+            Authorization: `token ${token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/vnd.github.v3+json'
+          },
+          body: JSON.stringify({
+            message,
+            content: encodedContent,
+            branch,
+            sha: sha || undefined
+          })
+        });
+      })
+      .then(res => {
+        if (res.ok) {
+          console.log('✅ Journal saved to GitHub.');
+        } else {
+          console.error('❌ Save failed:', res.status);
+        }
+      });
     }
 
     function ensureVisibleContent() {
       if (content.innerHTML.trim() === '') {
         const div = document.createElement('div');
         div.className = 'entry-line';
-
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
-
         const span = document.createElement('span');
         span.textContent = 'Start writing...';
-
         div.appendChild(checkbox);
         div.appendChild(span);
         content.appendChild(div);
       }
     }
 
-    async function saveContent() {
-      const contentToSave = content.innerHTML;
-      const encodedContent = btoa(unescape(encodeURIComponent(contentToSave)));
-
-      const shaRes = await fetch(`https://api.github.com/repos/${repo}/contents/${pendingPath}`, {
-        headers: { Authorization: `token ${token}` }
-      });
-
-      let sha = '';
-      if (shaRes.ok) {
-        const fileData = await shaRes.json();
-        sha = fileData.sha;
-      }
-
-      await fetch(`https://api.github.com/repos/${repo}/contents/${pendingPath}`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `token ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: 'Auto-save journal content',
-          content: encodedContent,
-          branch,
-          sha: sha || undefined,
-        }),
-      });
+    function fadeInPanel() {
+      const panel = document.getElementById("journal-panel");
+      panel.classList.remove("visible");
+      setTimeout(() => panel.classList.add("visible"), 10);
     }
 
-    async function loadToday() {
-      const today = getTodayKey();
-      const url = `https://raw.githubusercontent.com/${repo}/${branch}/journals/${today}`;
+    function loadCollection(name) {
+      const key = `collection-${name}`;
+      currentKey = key;
+      title.textContent = name.toUpperCase();
+      dateLabel.textContent = '(COLLECTION)';
+      content.innerHTML = '';
+      ensureVisibleContent();
+      fadeInPanel();
+    }
 
-      try {
-        const res = await fetch(url);
-        const data = res.ok ? await res.text() : '';
-        content.innerHTML = data || '';
-        ensureVisibleContent();
-      } catch (e) {
-        console.error("Load failed", e);
-        ensureVisibleContent();
+    function loadContent(key, label) {
+      currentKey = key;
+      title.textContent = label.toUpperCase();
+      dateLabel.textContent = key.includes('journal-') ? key.replace('journal-', '') : '(COLLECTION)';
+      content.innerHTML = '';
+      ensureVisibleContent();
+      fadeInPanel();
+    }
+
+    function createCollection() {
+      const input = document.getElementById('new-collection-name');
+      const name = input.value.trim().toLowerCase().replace(/\s+/g, '-');
+      if (name) {
+        const displayName = name.replace(/-/g, ' ').toUpperCase();
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.textContent = `📁 ${displayName}`;
+        div.setAttribute("data-collection", name);
+        collectionsList.appendChild(div);
+        input.value = '';
+        popup.style.display = 'none';
+        loadCollection(name);
       }
+    }
+
+    function toggleCollectionPopup() {
+      popup.style.display = popup.style.display === 'flex' ? 'none' : 'flex';
+    }
+
+    function refreshIndex() {
+      indexCard.innerHTML = '<h2>INDEX</h2>';
+      const today = new Date().toISOString().slice(0, 10);
+      const div = document.createElement('div');
+      div.className = 'item';
+      div.innerHTML = `<b>DAILY LOG (TODAY)</b><br>${today}`;
+      div.onclick = () => loadContent(`journal-${today}`, 'DAILY LOG (TODAY)');
+      indexCard.appendChild(div);
     }
 
     content.addEventListener("input", saveContent);
     content.addEventListener("change", saveContent);
 
-    window.onload = loadToday;
+    collectionsList.addEventListener("click", (e) => {
+      const item = e.target.closest('.item');
+      if (item && item.dataset.collection) {
+        loadCollection(item.dataset.collection);
+      }
+    });
+
+    loadContent(currentKey, 'DAILY LOG');
+    ensureVisibleContent();
+    refreshIndex();
+    fadeInPanel();
+  });
   </script>
 </body>
 </html>

@@ -13,18 +13,33 @@ jobs:
         with:
           token: ${{ secrets.GH_TOKEN_BUJO }}
 
-      - name: Decode and write journal
+      - name: Decode and write journal or collection
         run: |
-          mkdir -p journals
-          echo "${{ github.event.client_payload.content }}" | base64 -d > journals/journal-${{ github.event.client_payload.date }}.html
+          MODE="${{ github.event.client_payload.mode }}"
+          DATE="${{ github.event.client_payload.date }}"
+          CONTENT="${{ github.event.client_payload.content }}"
 
-      - name: Commit and push journal
+          if [ "$MODE" = "collections-index" ]; then
+            FOLDER="journals/collections"
+            FILENAME="collections-index.json"
+          elif [ "$MODE" = "collection" ]; then
+            FOLDER="journals/collections"
+            FILENAME="collection-$DATE.html"
+          else
+            FOLDER="journals/indexes"
+            FILENAME="journal-$DATE.html"
+          fi
+
+          mkdir -p "$FOLDER"
+          echo "$CONTENT" | base64 -d > "$FOLDER/$FILENAME"
+
+      - name: Commit and push update
         env:
           GH_TOKEN_BUJO: ${{ secrets.GH_TOKEN_BUJO }}
         run: |
           git config user.name "Auto Journal Bot"
           git config user.email "bot@users.noreply.github.com"
           git add journals/
-          git commit -m "📓 Save journal for ${{ github.event.client_payload.date }}" || echo "No changes to commit"
+          git commit -m "📓 Save ${{ github.event.client_payload.mode }}: ${{ github.event.client_payload.date }}" || echo "No changes to commit"
           git pull --rebase origin main || echo "⚠️ Rebase failed, possibly due to conflict"
           git push https://x-access-token:${GH_TOKEN_BUJO}@github.com/lebron1212/bulletjournal.git HEAD:main || echo "⚠️ Push failed"

@@ -292,16 +292,24 @@
         color: #eee;
       }
 
-      #hide-wrapper {
-        position: fixed;
-        bottom: 12px;
-        left: 12px;
-        font-size: 0.6rem;
-        color: #aaa;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-      }
+     #hide-wrapper {
+  position: fixed;
+  bottom: 12px;
+  left: 12px;
+  font-size: 0.6rem;
+  color: #aaa;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 6px 10px;
+  border-radius: 6px;
+  z-index: 1000;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+#hide-wrapper input {
+  transform: scale(1.2);
+}
 
       @media (prefers-color-scheme: light) {
         body, html {
@@ -633,6 +641,21 @@
             }
           });
       }
+
+      function reapplyHideCompleted() {
+  const hide = document.getElementById("hide-completed").checked;
+  document.querySelectorAll(".entry-line").forEach(el => {
+    const isDone = el.querySelector('input[type=checkbox]')?.checked;
+    el.classList.toggle("done", isDone);
+    el.style.display = isDone && hide ? "none" : "flex";
+  });
+}
+
+// ensure reapplication on load
+content.addEventListener("DOMSubtreeModified", () => {
+  reapplyHideCompleted();
+});
+
 
       function loadCollectionsList() {
         collectionsListContainer.innerHTML = "";

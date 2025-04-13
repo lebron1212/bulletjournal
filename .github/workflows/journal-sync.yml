@@ -4,6 +4,9 @@ on:
   repository_dispatch:
     types: [save-journal]
 
+permissions:
+  contents: write
+
 jobs:
   save:
     runs-on: ubuntu-latest

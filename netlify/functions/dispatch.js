@@ -1,8 +1,26 @@
-// netlify/functions/dispatch.js
-
 export async function handler(event) {
+  // 👇 Allow all origins + methods for CORS
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  };
+
+  // Handle preflight CORS request
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers,
+      body: 'CORS preflight okay'
+    };
+  }
+
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
+    return {
+      statusCode: 405,
+      headers,
+      body: 'Method Not Allowed'
+    };
   }
 
   const token = process.env.GH_TOKEN_BUJO;
@@ -28,18 +46,21 @@ export async function handler(event) {
     if (!res.ok) {
       return {
         statusCode: res.status,
+        headers,
         body: `GitHub dispatch failed with ${res.status}`
       };
     }
 
     return {
       statusCode: 200,
+      headers,
       body: '✅ Journal dispatched successfully'
     };
 
   } catch (err) {
     return {
       statusCode: 500,
+      headers,
       body: `Server error: ${err.message}`
     };
   }

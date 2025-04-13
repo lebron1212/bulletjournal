@@ -292,24 +292,25 @@
         color: #eee;
       }
 
-     #hide-wrapper {
-  position: fixed;
-  bottom: 12px;
-  left: 12px;
-  font-size: 0.6rem;
-  color: #aaa;
-  background: rgba(255, 255, 255, 0.06);
-  padding: 6px 10px;
-  border-radius: 6px;
-  z-index: 1000;
-  user-select: none;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-#hide-wrapper input {
-  transform: scale(1.2);
-}
+      #hide-wrapper {
+        position: fixed;
+        bottom: 12px;
+        left: 12px;
+        font-size: 0.6rem;
+        color: #aaa;
+        background: rgba(255, 255, 255, 0.06);
+        padding: 6px 10px;
+        border-radius: 6px;
+        z-index: 1000;
+        user-select: none;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      #hide-wrapper input {
+        transform: scale(1.2);
+      }
 
       @media (prefers-color-scheme: light) {
         body, html {
@@ -350,17 +351,6 @@
 
         .entry-line input[type="checkbox"]:checked::after {
           color: #000;
-        }
-
-        .card .item {
-          background: none !important;
-          color: #000000 !important;
-          border-radius: 4px;
-          padding: 2px 4px;
-        }
-
-        .card .item:hover {
-          background: #eee;
         }
 
         #hide-wrapper {
@@ -423,18 +413,45 @@
       let currentSlug = new Date().toISOString().slice(0, 10);
       let collectionsList = [];
 
+      function updateStatus(text, isSyncing = false) {
+        label.textContent = text;
+        spinner.style.display = isSyncing ? "inline-block" : "none";
+      }
+
+      function saveContent() {
+        const encoded = btoa(unescape(encodeURIComponent(content.innerHTML)));
+        localStorage.setItem(`bujocache-${currentMode}-${currentSlug}`, encoded);
+
+        updateStatus("SYNCING...", true);
+        const payload = {
+          date: currentSlug,
+          content: encoded,
+          mode: currentMode
+        };
+
+        fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        })
+        .then(res => {
+          if (res.ok) updateStatus("SYNCED");
+          else updateStatus("NETLIFY ERROR");
+        })
+        .catch(() => updateStatus("APPTION ERROR"));
+      }
+
+      function debounceSave() {
+        clearTimeout(window._saveTimeout);
+        window._saveTimeout = setTimeout(saveContent, 2000);
+      }
+
       function handleCheckboxToggle(e) {
         const checkbox = e.target;
         const entry = checkbox.closest('.entry-line');
         entry.classList.toggle('done', checkbox.checked);
-        if (document.getElementById("hide-completed").checked) {
-          toggleCompleted();
-        }
-      }
-
-      function updateStatus(text, isSyncing = false) {
-        label.textContent = text;
-        spinner.style.display = isSyncing ? "inline-block" : "none";
+        if (document.getElementById("hide-completed").checked) toggleCompleted();
+        debounceSave();
       }
 
       function ensureVisibleContent() {
@@ -468,40 +485,36 @@
         return false;
       }
 
-      function saveContent() {
-        const encoded = btoa(unescape(encodeURIComponent(content.innerHTML)));
-        localStorage.setItem(`bujocache-${currentMode}-${currentSlug}`, encoded);
-
-        updateStatus("SYNCING...", true);
-        const payload = {
-          date: currentSlug,
-          content: encoded,
-          mode: currentMode
-        };
-
-        fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        })
-        .then(res => {
-          if (res.ok) updateStatus("SYNCED");
-          else updateStatus("NETLIFY ERROR");
-        })
-        .catch(() => updateStatus("APPTION ERROR"));
+      function toggleCompleted() {
+        const hide = document.getElementById("hide-completed").checked;
+        document.querySelectorAll(".entry-line").forEach(el => {
+          const cb = el.querySelector('input[type=checkbox]');
+          const done = cb?.checked;
+          el.classList.toggle('done', done);
+          el.style.display = hide && done ? "none" : "flex";
+        });
       }
 
-      function debounceSave() {
-        clearTimeout(window._saveTimeout);
-        window._saveTimeout = setTimeout(saveContent, 2000);
+      function reapplyHideCompleted() {
+        toggleCompleted();
       }
+
+      content.addEventListener("DOMSubtreeModified", () => {
+        reapplyHideCompleted();
+      });
 
       content.addEventListener("input", debounceSave);
       content.addEventListener("change", debounceSave);
       content.addEventListener("keydown", e => {
+        const isMac = navigator.platform.toUpperCase().includes("MAC");
+        const meta = isMac ? e.metaKey : e.ctrlKey;
+
+        if (meta && e.key.toLowerCase() === "b") { document.execCommand("bold"); e.preventDefault(); }
+        if (meta && e.key.toLowerCase() === "i") { document.execCommand("italic"); e.preventDefault(); }
+        if (meta && e.key.toLowerCase() === "u") { document.execCommand("underline"); e.preventDefault(); }
+
         if (e.key === "Enter") {
           e.preventDefault();
-
           const div = document.createElement('div');
           div.className = 'entry-line';
 
@@ -525,6 +538,7 @@
           sel.removeAllRanges();
           sel.addRange(range);
 
+          reapplyHideCompleted();
           debounceSave();
         }
 
@@ -641,21 +655,6 @@
             }
           });
       }
-
-      function reapplyHideCompleted() {
-  const hide = document.getElementById("hide-completed").checked;
-  document.querySelectorAll(".entry-line").forEach(el => {
-    const isDone = el.querySelector('input[type=checkbox]')?.checked;
-    el.classList.toggle("done", isDone);
-    el.style.display = isDone && hide ? "none" : "flex";
-  });
-}
-
-// ensure reapplication on load
-content.addEventListener("DOMSubtreeModified", () => {
-  reapplyHideCompleted();
-});
-
 
       function loadCollectionsList() {
         collectionsListContainer.innerHTML = "";

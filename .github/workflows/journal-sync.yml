@@ -1,5 +1,8 @@
 name: Save Journal Entry
 
+description: >
+  GitHub Action to save daily journal entries from frontend calls.
+
 on:
   repository_dispatch:
     types: [save-journal]
@@ -11,17 +14,18 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Decode and write journal
+      - name: Decode and write journal entry
         run: |
           mkdir -p journals
           echo "${{ github.event.client_payload.content }}" | base64 -d > journals/journal-${{ github.event.client_payload.date }}.html
 
-      - name: Commit journal
+      - name: Commit new journal entry
         run: |
-          git config user.name "Auto Journal Bot"
-          git config user.email "bot@users.noreply.github.com"
+          git config --global user.name "Auto Journal Bot"
+          git config --global user.email "bot@users.noreply.github.com"
           git add journals/
-          git commit -m "\ud83d\udcd3 Save journal for ${{ github.event.client_payload.date }}"
+          git commit -m "\ud83d\udcd3 Save journal for ${{ github.event.client_payload.date }}" || echo "Nothing to commit"
           git push
         env:
+          GH_TOKEN_BUJO: ${{ secrets.GH_TOKEN_BUJO }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

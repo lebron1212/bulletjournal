@@ -4,9 +4,6 @@ on:
   repository_dispatch:
     types: [save-journal]
 
-permissions:
-  contents: write
-
 jobs:
   save:
     runs-on: ubuntu-latest
@@ -27,5 +24,5 @@ jobs:
           git config user.email "bot@users.noreply.github.com"
           git add journals/
           git commit -m "📓 Save journal for ${{ github.event.client_payload.date }}" || echo "No changes to commit"
-          git pull --rebase origin main
-          git push https://x-access-token:${GH_TOKEN_BUJO}@github.com/lebron1212/bulletjournal.git HEAD:refs/heads/main  
+          git pull --rebase origin main || echo "⚠️ Rebase failed, possibly due to conflict"
+          git push https://x-access-token:${GH_TOKEN_BUJO}@github.com/lebron1212/bulletjournal.git HEAD:refs/heads/main || echo "⚠️ Push failed"

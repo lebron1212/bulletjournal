@@ -355,6 +355,10 @@
           <input id="index-search" placeholder="search YYYY-MM-DD" oninput="filterIndex()" />
           <div class="item" data-entry="today">TODAY</div>
           <div class="item" data-entry="yesterday">YESTERDAY</div>
+          <label style="font-size: 0.65rem; display: block; margin-top: 10px;">
+  <input type="checkbox" id="hide-completed" onchange="toggleCompleted()" style="margin-right: 6px;" />
+  HIDE COMPLETED
+</label>
         </div>
         <div id="collections-card" class="card">
           <h2>COLLECTIONS</h2>
@@ -628,6 +632,15 @@
         });
       }
 
+      function toggleCompleted() {
+  const hide = document.getElementById("hide-completed").checked;
+  document.querySelectorAll(".entry-line").forEach(el => {
+    if (el.classList.contains("done")) {
+      el.style.display = hide ? "none" : "flex";
+    }
+  });
+}
+
       document.querySelector('[data-entry="today"]').addEventListener("click", () => {
         loadSyncedContent(new Date().toISOString().slice(0, 10));
       });
@@ -644,8 +657,31 @@
       document.querySelectorAll('.entry-line input[type=checkbox]').forEach(cb => {
   cb.addEventListener('change', handleCheckboxToggle);
   if (cb.checked) cb.dispatchEvent(new Event('change'));
-});
+  if (document.getElementById("hide-completed")?.checked) {
+  toggleCompleted();
+}
 
+});
+      
+document.addEventListener("keydown", e => {
+  const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+  const metaKey = isMac ? e.metaKey : e.ctrlKey;
+
+  if (metaKey && e.key.toLowerCase() === 'b') {
+    document.execCommand("bold");
+    e.preventDefault();
+  }
+
+  if (metaKey && e.key.toLowerCase() === 'i') {
+    document.execCommand("italic");
+    e.preventDefault();
+  }
+
+  if (metaKey && e.key.toLowerCase() === 'u') {
+    document.execCommand("underline");
+    e.preventDefault();
+  }
+});
     </script>
   </body>
 </html>

@@ -266,10 +266,12 @@
 }
 
 .entry-line .line-text {
-  display: block;
   flex-grow: 1;
-  word-break: break-word;
   white-space: pre-wrap;
+  word-break: break-word;
+  outline: none;
+  line-height: 1.8;
+  min-height: 24px;
 }
 
 .entry-line input[type=checkbox]:checked ~ .line-text {
@@ -411,18 +413,24 @@
       }
 
       function ensureVisibleContent() {
-        if (content.innerHTML.trim() === '') {
-          const div = document.createElement('div');
-          div.className = 'entry-line';
-          const checkbox = document.createElement('input');
-          checkbox.type = 'checkbox';
-          const span = document.createElement('span');
-          span.textContent = 'Start writing...';
-          div.appendChild(checkbox);
-          div.appendChild(span);
-          content.appendChild(div);
-        }
-      }
+  if (content.innerHTML.trim() === '') {
+    const div = document.createElement('div');
+    div.className = 'entry-line';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.addEventListener('change', handleCheckboxToggle);
+
+    const text = document.createElement('div');
+    text.className = 'line-text';
+    text.contentEditable = true;
+    text.innerHTML = 'Start writing...';
+
+    div.appendChild(checkbox);
+    div.appendChild(text);
+    content.appendChild(div);
+  }
+}
 
       function restoreFromCache() {
         const key = `bujocache-${currentMode}-${currentSlug}`;
@@ -466,34 +474,35 @@
       content.addEventListener("input", debounceSave);
       content.addEventListener("change", debounceSave);
       content.addEventListener("keydown", e => {
-    if (e.key === "Enter") {
-  e.preventDefault();
+  if (e.key === "Enter") {
+    e.preventDefault();
 
-  const div = document.createElement('div');
-  div.className = 'entry-line';
+    const div = document.createElement('div');
+    div.className = 'entry-line';
 
-  const checkbox = document.createElement('input');
-  checkbox.type = 'checkbox';
-  checkbox.addEventListener('change', handleCheckboxToggle);
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.addEventListener('change', handleCheckboxToggle);
 
-  const span = document.createElement('span');
-  span.className = 'line-text';
-  span.innerHTML = '&nbsp;';
+    const text = document.createElement('div');
+    text.className = 'line-text';
+    text.contentEditable = true;
+    text.innerHTML = '&nbsp;';
 
-  div.appendChild(checkbox);
-  div.appendChild(span);
-  content.appendChild(div);
+    div.appendChild(checkbox);
+    div.appendChild(text);
+    content.appendChild(div);
 
-  const range = document.createRange();
-  const sel = window.getSelection();
-  range.setStart(span, 1);
-  range.collapse(true);
-  sel.removeAllRanges();
-  sel.addRange(range);
+    const range = document.createRange();
+    const sel = window.getSelection();
+    range.setStart(text, 0);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
 
-  debounceSave();
-}
-      });
+    debounceSave();
+  }
+});
 
       function toggleCollectionPopup() {
         const popup = document.getElementById("collection-popup");

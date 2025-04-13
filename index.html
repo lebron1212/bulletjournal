@@ -199,48 +199,23 @@
 
     let currentKey = `journal-${new Date().toISOString().slice(0, 10)}`;
 
-    function saveContent() {
-      const token = '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'; // ← Replace with your real token
-      const repo = 'lebron1212/bulletjournal';
-      const branch = 'main';
-      const path = 'pending-save.txt';
-      const message = 'Auto-save journal entry';
+function saveContent() {
+  const contentToSave = content.innerHTML;
+  const today = new Date().toISOString().slice(0, 10);
+  const encoded = btoa(unescape(encodeURIComponent(contentToSave)));
 
-      const contentToSave = content.innerHTML;
-      const encodedContent = btoa(unescape(encodeURIComponent(contentToSave)));
-
-      fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
-        method: 'GET',
-        headers: {
-          Authorization: `token ${token}`,
-          'Accept': 'application/vnd.github.v3+json'
-        }
-      })
-      .then(res => res.ok ? res.json() : Promise.resolve({ sha: undefined }))
-      .then(({ sha }) => {
-        return fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
-          method: 'PUT',
-          headers: {
-            Authorization: `token ${token}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/vnd.github.v3+json'
-          },
-          body: JSON.stringify({
-            message,
-            content: encodedContent,
-            branch,
-            sha: sha || undefined
-          })
-        });
-      })
-      .then(res => {
-        if (res.ok) {
-          console.log('✅ Journal saved to GitHub.');
-        } else {
-          console.error('❌ Save failed:', res.status);
-        }
-      });
+  fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ date: today, content: encoded })
+  }).then(res => {
+    if (res.ok) {
+      console.log("✅ Journal dispatched via Netlify");
+    } else {
+      console.error("❌ Netlify dispatch failed:", res.status);
     }
+  });
+}
 
     function ensureVisibleContent() {
       if (content.innerHTML.trim() === '') {

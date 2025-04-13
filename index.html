@@ -395,6 +395,16 @@
       let currentSlug = new Date().toISOString().slice(0, 10);
       let collectionsList = [];
 
+      function handleCheckboxToggle(e) {
+  const checkbox = e.target;
+  const entry = checkbox.closest('.entry-line');
+  if (checkbox.checked) {
+    entry.classList.add('done');
+  } else {
+    entry.classList.remove('done');
+  }
+}
+
       function updateStatus(text, isSyncing = false) {
         label.textContent = text;
         spinner.style.display = isSyncing ? "inline-block" : "none";
@@ -456,13 +466,15 @@
       content.addEventListener("input", debounceSave);
       content.addEventListener("change", debounceSave);
       content.addEventListener("keydown", e => {
-        if (e.key === "Enter") {
+    if (e.key === "Enter") {
   e.preventDefault();
+
   const div = document.createElement('div');
   div.className = 'entry-line';
 
   const checkbox = document.createElement('input');
   checkbox.type = 'checkbox';
+  checkbox.addEventListener('change', handleCheckboxToggle);
 
   const span = document.createElement('span');
   span.className = 'line-text';
@@ -619,6 +631,12 @@
 
       loadCollectionsList();
       loadSyncedContent(new Date().toISOString().slice(0, 10));
+
+      document.querySelectorAll('.entry-line input[type=checkbox]').forEach(cb => {
+  cb.addEventListener('change', handleCheckboxToggle);
+  if (cb.checked) cb.dispatchEvent(new Event('change'));
+});
+
     </script>
   </body>
 </html>

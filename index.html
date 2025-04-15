@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <meta content="width=device-width,initial-scale=1" name="viewport" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Bullet Journal</title>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet" />
   <style>
@@ -52,27 +52,32 @@
 
     #calendar-btn {
       position: absolute;
-      top: 20px;
-      right: 20px;
-      font-size: 0.9rem;
+      top: 10px;
+      right: 12px;
+      font-size: 0.7rem;
       background: none;
-      border: 1px solid #888;
+      border: 1px solid #666;
       color: #eee;
-      padding: 1px 5px;
+      padding: 0px 5px 1px;
       border-radius: 4px;
       cursor: pointer;
     }
 
     #calendar-popup {
-      position: absolute;
-      top: 48px;
+      position: fixed;
+      top: 60px;
       right: 20px;
+      background: #111;
+      padding: 8px;
+      border: 1px solid #444;
+      border-radius: 8px;
       display: none;
+      z-index: 999;
     }
 
     #calendar-popup input[type="date"] {
       font-family: 'IBM Plex Mono', monospace;
-      background: #000;
+      background: none;
       border: 1px solid #444;
       color: #fff;
       padding: 4px 6px;
@@ -104,6 +109,8 @@
       margin-bottom: 8px;
       transition: opacity 0.2s;
       color: #aaa;
+      display: flex;
+      justify-content: space-between;
     }
 
     .card .item.active {
@@ -351,9 +358,7 @@
       <div class="card" id="index-card">
         <h2>INDEX</h2>
         <button id="calendar-btn">+</button>
-        <div id="calendar-popup">
-          <input type="date" id="calendar-input" />
-        </div>
+        <div id="calendar-popup"><input type="date" id="calendar-input" /></div>
         <input id="index-search" placeholder="search YYYY-MM-DD" oninput="filterIndex()" />
         <div class="item" data-entry="yesterday">YESTERDAY</div>
         <div class="item" data-entry="today">TODAY</div>
@@ -393,296 +398,330 @@
   <div id="hide-wrapper">
     <label><input type="checkbox" id="hide-completed" onchange="toggleCompleted()" /> HIDE COMPLETED</label>
   </div>
-  <script>
-    const content = document.getElementById("journal-content");
-    const dateLabel = document.getElementById("entry-date");
-    const title = document.getElementById("entry-title");
-    const calendarBtn = document.getElementById("calendar-btn");
-    const calendarPopup = document.getElementById("calendar-popup");
-    const calendarInput = document.getElementById("calendar-input");
-    const collectionsListContainer = document.getElementById("collections-list");
+<script>
+  const content = document.getElementById("journal-content");
+  const dateLabel = document.getElementById("entry-date");
+  const title = document.getElementById("entry-title");
+  const calendarBtn = document.getElementById("calendar-btn");
+  const calendarPopup = document.getElementById("calendar-popup");
+  const calendarInput = document.getElementById("calendar-input");
+  const collectionsListContainer = document.getElementById("collections-list");
 
-    let currentMode = "daily";
-    let currentSlug = new Date().toISOString().slice(0, 10);
-    let collectionsList = [];
+  let currentMode = "daily";
+  let currentSlug = new Date().toISOString().slice(0, 10);
+  let collectionsList = [];
 
-    calendarBtn.addEventListener("click", () => {
-      calendarPopup.style.display = calendarPopup.style.display === "block" ? "none" : "block";
-    });
+  let undoStack = [], redoStack = [];
 
-    calendarInput.addEventListener("change", e => {
-      if (e.target.value) {
-        loadSyncedContent(e.target.value);
-        calendarPopup.style.display = "none";
-      }
-    });
+  function updateUndoStack() {
+    undoStack.push(content.innerHTML);
+    if (undoStack.length > 100) undoStack.shift();
+    redoStack = [];
+  }
 
-    function updateStatus(text, isSyncing = false) {
-      const label = document.querySelector("#sync-status .label");
-      const spinner = document.querySelector("#sync-status .spinner");
-      label.textContent = text;
-      spinner.style.display = isSyncing ? "inline-block" : "none";
-    }
+  content.addEventListener("keydown", e => {
+    const isMac = navigator.platform.toUpperCase().includes("MAC");
+    const meta = isMac ? e.metaKey : e.ctrlKey;
 
-    function forceCheckboxAttributes() {
-      content.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-        cb.checked ? cb.setAttribute("checked", "checked") : cb.removeAttribute("checked");
-      });
-    }
-
-    function saveContent() {
-      forceCheckboxAttributes();
-      const html = `<!-- version:${new Date().toISOString()} -->\n` + content.innerHTML;
-      const encoded = btoa(unescape(encodeURIComponent(html)));
-      const key = `bujocache-${currentMode}-${currentSlug}`;
-      localStorage.setItem(key, encoded);
-
-      updateStatus("SYNCING...", true);
-      fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date: currentSlug, content: encoded, mode: currentMode })
-      })
-      .then(res => updateStatus(res.ok ? "SYNCED" : "NETLIFY ERROR"))
-      .catch(() => updateStatus("APPTION ERROR"));
-    }
-
-    function debounceSave() {
-      clearTimeout(window._saveTimeout);
-      window._saveTimeout = setTimeout(saveContent, 1000);
-    }
-
-    function restoreFromCache() {
-      const key = `bujocache-${currentMode}-${currentSlug}`;
-      const cached = localStorage.getItem(key);
-      if (cached) {
-        content.innerHTML = decodeURIComponent(escape(atob(cached))).replace(/<!-- version:.*?-->\n?/i, "");
-        updateStatus("LOADED CACHED");
-        return true;
-      }
-      return false;
-    }
-
-    function ensureVisibleContent() {
-      if (content.innerHTML.trim() === "") {
-        const div = document.createElement("div");
-        div.className = "entry-line";
-
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.addEventListener("change", debounceSave);
-
-        const text = document.createElement("div");
-        text.className = "line-text";
-        text.contentEditable = true;
-        text.innerHTML = "Start writing...";
-
-        div.appendChild(checkbox);
-        div.appendChild(text);
-        content.appendChild(div);
-      }
-    }
-
-    function formatPrettyDate(dateStr) {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }).toUpperCase();
-    }
-
-    function setActiveIndex(dateStr) {
-      const today = new Date().toISOString().slice(0, 10);
-      const d = new Date(dateStr);
-      const ref = new Date(today);
-      const diff = Math.round((d - ref) / (1000 * 60 * 60 * 24));
-      document.querySelectorAll("#index-card .item").forEach(el => el.classList.remove("active"));
-      if (diff === -1) document.querySelector('[data-entry="yesterday"]').classList.add("active");
-      else if (diff === 0) document.querySelector('[data-entry="today"]').classList.add("active");
-      else if (diff === 1) document.querySelector('[data-entry="tomorrow"]').classList.add("active");
-    }
-
-    function loadSyncedContent(date) {
-      currentMode = "daily";
-      currentSlug = date;
-      title.textContent = "DAILY LOG";
-      dateLabel.textContent = formatPrettyDate(date);
-      setActiveIndex(date);
-
-      if (!restoreFromCache()) {
-        content.innerHTML = "";
-        ensureVisibleContent();
-      }
-
-      const url = `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${date}.html?cb=${Date.now()}`;
-      fetch(url)
-        .then(res => res.ok ? res.text() : Promise.reject())
-        .then(html => {
-          content.innerHTML = html.replace(/<!-- version:.*?-->\n?/i, "");
-          updateStatus("LOADED SYNCED");
-          debounceSave();
-        })
-        .catch(() => updateStatus("OFFLINE"));
-    }
-
-    document.querySelector('[data-entry="today"]').addEventListener("click", () => {
-      loadSyncedContent(new Date().toISOString().slice(0, 10));
-    });
-
-    document.querySelector('[data-entry="yesterday"]').addEventListener("click", () => {
-      const d = new Date(); d.setDate(d.getDate() - 1);
-      loadSyncedContent(d.toISOString().slice(0, 10));
-    });
-
-    document.querySelector('[data-entry="tomorrow"]').addEventListener("click", () => {
-      const d = new Date(); d.setDate(d.getDate() + 1);
-      loadSyncedContent(d.toISOString().slice(0, 10));
-    });
-
-    function toggleCompleted() {
-      const hide = document.getElementById("hide-completed").checked;
-      document.querySelectorAll(".entry-line").forEach(el => {
-        const cb = el.querySelector('input[type="checkbox"]');
-        const done = cb?.checked;
-        el.classList.toggle("done", done);
-        el.style.display = hide && done ? "none" : "flex";
-      });
-    }
-
-    content.addEventListener("input", debounceSave);
-    content.addEventListener("change", debounceSave);
-
-    content.addEventListener("keydown", e => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        const div = document.createElement("div");
-        div.className = "entry-line";
-
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.addEventListener("change", debounceSave);
-
-        const text = document.createElement("div");
-        text.className = "line-text";
-        text.contentEditable = true;
-        text.innerHTML = "&nbsp;";
-
-        div.appendChild(checkbox);
-        div.appendChild(text);
-        content.appendChild(div);
-
-        const sel = window.getSelection();
-        const range = document.createRange();
-        range.setStart(text, 0);
-        range.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(range);
-
+    if (meta && e.key === "z" && !e.shiftKey) {
+      e.preventDefault();
+      if (undoStack.length) {
+        redoStack.push(content.innerHTML);
+        content.innerHTML = undoStack.pop();
         debounceSave();
       }
+    }
+    if ((meta && e.key === "Z") || (meta && e.shiftKey && e.key === "z")) {
+      e.preventDefault();
+      if (redoStack.length) {
+        undoStack.push(content.innerHTML);
+        content.innerHTML = redoStack.pop();
+        debounceSave();
+      }
+    }
+  });
+
+  calendarBtn.addEventListener("click", () => {
+    calendarPopup.style.display = calendarPopup.style.display === "block" ? "none" : "block";
+  });
+
+  calendarInput.addEventListener("change", e => {
+    if (e.target.value) {
+      loadSyncedContent(e.target.value);
+      calendarPopup.style.display = "none";
+    }
+  });
+
+  function updateStatus(text, isSyncing = false) {
+    const label = document.querySelector("#sync-status .label");
+    const spinner = document.querySelector("#sync-status .spinner");
+    label.textContent = text;
+    spinner.style.display = isSyncing ? "inline-block" : "none";
+  }
+
+  function forceCheckboxAttributes() {
+    content.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      cb.checked ? cb.setAttribute("checked", "checked") : cb.removeAttribute("checked");
     });
+  }
 
-    function toggleCollectionPopup() {
-      const popup = document.getElementById("collection-popup");
-      popup.style.display = popup.style.display === "flex" ? "none" : "flex";
+  function saveContent() {
+    forceCheckboxAttributes();
+    const html = `<!-- version:${new Date().toISOString()} -->\n` + content.innerHTML;
+    const encoded = btoa(unescape(encodeURIComponent(html)));
+    const key = `bujocache-${currentMode}-${currentSlug}`;
+    localStorage.setItem(key, encoded);
+
+    updateStatus("SYNCING...", true);
+    fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ date: currentSlug, content: encoded, mode: currentMode })
+    })
+    .then(res => updateStatus(res.ok ? "SYNCED" : "NETLIFY ERROR"))
+    .catch(() => updateStatus("APPTION ERROR"));
+  }
+
+  function debounceSave() {
+    clearTimeout(window._saveTimeout);
+    window._saveTimeout = setTimeout(() => {
+      updateUndoStack();
+      saveContent();
+    }, 800);
+  }
+
+  function restoreFromCache() {
+    const key = `bujocache-${currentMode}-${currentSlug}`;
+    const cached = localStorage.getItem(key);
+    if (cached) {
+      content.innerHTML = decodeURIComponent(escape(atob(cached))).replace(/<!-- version:.*?-->\n?/i, "");
+      updateStatus("LOADED CACHED");
+      return true;
     }
+    return false;
+  }
 
-    function createCollection() {
-      const nameInput = document.getElementById("new-collection-name");
-      const name = nameInput.value.trim();
-      if (!name) return;
-      const slug = name.toLowerCase();
-      if (!collectionsList.includes(slug)) {
-        collectionsList.push(slug);
-        renderCollectionItem(slug);
-        saveCollectionsIndex();
-      }
-      nameInput.value = "";
-      toggleCollectionPopup();
-    }
-
-    function renderCollectionItem(slug) {
+  function ensureVisibleContent() {
+    if (content.innerHTML.trim() === "") {
       const div = document.createElement("div");
-      div.className = "item";
-      div.innerHTML =
-        `<span onclick="loadCollection('${slug}')">${slug.toUpperCase()}</span>
-         <span class="item-controls">
-           <button class="icon-btn" onclick="renameCollectionPrompt('${slug}')">✎</button>
-           <button class="icon-btn" onclick="deleteCollection('${slug}')">🗑</button>
-         </span>`;
-      collectionsListContainer.appendChild(div);
+      div.className = "entry-line";
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.addEventListener("change", debounceSave);
+
+      const text = document.createElement("div");
+      text.className = "line-text";
+      text.contentEditable = true;
+      text.innerHTML = "Start writing...";
+
+      div.appendChild(checkbox);
+      div.appendChild(text);
+      content.appendChild(div);
+    }
+  }
+
+  function formatPrettyDate(dateStr) {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }).toUpperCase();
+  }
+
+  function highlightActive(slug) {
+    document.querySelectorAll("#index-card .item, #collections-list .item").forEach(el => el.classList.remove("active"));
+    const target = document.querySelector(`[data-entry="${slug}"]`);
+    if (target) target.classList.add("active");
+    else {
+      const collectionEl = [...document.querySelectorAll("#collections-list .item")]
+        .find(el => el.innerText.includes(slug.toUpperCase()));
+      if (collectionEl) collectionEl.classList.add("active");
+    }
+  }
+
+  function loadSyncedContent(date) {
+    currentMode = "daily";
+    currentSlug = date;
+    title.textContent = "DAILY LOG";
+    dateLabel.textContent = formatPrettyDate(date);
+    highlightActive(date);
+
+    if (!restoreFromCache()) {
+      content.innerHTML = "";
+      ensureVisibleContent();
     }
 
-    function renameCollectionPrompt(oldSlug) {
-      const newName = prompt("Rename collection:", oldSlug.toUpperCase());
-      if (!newName) return;
-      const newSlug = newName.trim().toLowerCase();
-      const index = collectionsList.indexOf(oldSlug);
-      if (index !== -1) {
-        collectionsList[index] = newSlug;
-        saveCollectionsIndex();
-        loadCollectionsList();
-      }
+    const url = `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${date}.html?cb=${Date.now()}`;
+    fetch(url)
+      .then(res => res.ok ? res.text() : Promise.reject())
+      .then(html => {
+        content.innerHTML = html.replace(/<!-- version:.*?-->\n?/i, "");
+        updateStatus("LOADED SYNCED");
+        debounceSave();
+      })
+      .catch(() => updateStatus("OFFLINE"));
+  }
+
+  function loadCollection(slug) {
+    currentMode = "collection";
+    currentSlug = slug;
+    title.textContent = slug.toUpperCase();
+    dateLabel.textContent = "";
+    highlightActive(slug);
+
+    if (!restoreFromCache()) {
+      content.innerHTML = "";
+      ensureVisibleContent();
     }
 
-    function deleteCollection(slug) {
-      if (!confirm(`Delete collection "${slug.toUpperCase()}"?`)) return;
-      collectionsList = collectionsList.filter(s => s !== slug);
+    const url = `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/collections/collection-${slug}.html?cb=${Date.now()}`;
+    fetch(url)
+      .then(res => res.ok ? res.text() : Promise.reject())
+      .then(html => {
+        content.innerHTML = html.replace(/<!-- version:.*?-->\n?/i, "");
+        updateStatus("LOADED SYNCED");
+        debounceSave();
+      })
+      .catch(() => updateStatus("OFFLINE"));
+  }
+
+  document.querySelector('[data-entry="today"]').addEventListener("click", () => {
+    loadSyncedContent(new Date().toISOString().slice(0, 10));
+  });
+
+  document.querySelector('[data-entry="yesterday"]').addEventListener("click", () => {
+    const d = new Date(); d.setDate(d.getDate() - 1);
+    loadSyncedContent(d.toISOString().slice(0, 10));
+  });
+
+  document.querySelector('[data-entry="tomorrow"]').addEventListener("click", () => {
+    const d = new Date(); d.setDate(d.getDate() + 1);
+    loadSyncedContent(d.toISOString().slice(0, 10));
+  });
+
+  content.addEventListener("input", debounceSave);
+  content.addEventListener("change", debounceSave);
+
+  content.addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const div = document.createElement("div");
+      div.className = "entry-line";
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.addEventListener("change", debounceSave);
+
+      const text = document.createElement("div");
+      text.className = "line-text";
+      text.contentEditable = true;
+      text.innerHTML = "&nbsp;";
+
+      div.appendChild(checkbox);
+      div.appendChild(text);
+      content.appendChild(div);
+
+      const sel = window.getSelection();
+      const range = document.createRange();
+      range.setStart(text, 0);
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
+
+      debounceSave();
+    }
+  });
+
+  function toggleCompleted() {
+    const hide = document.getElementById("hide-completed").checked;
+    document.querySelectorAll(".entry-line").forEach(el => {
+      const cb = el.querySelector('input[type="checkbox"]');
+      const done = cb?.checked;
+      el.classList.toggle("done", done);
+      el.style.display = hide && done ? "none" : "flex";
+    });
+  }
+
+  function toggleCollectionPopup() {
+    const popup = document.getElementById("collection-popup");
+    popup.style.display = popup.style.display === "flex" ? "none" : "flex";
+  }
+
+  function createCollection() {
+    const nameInput = document.getElementById("new-collection-name");
+    const name = nameInput.value.trim();
+    if (!name) return;
+    const slug = name.toLowerCase();
+    if (!collectionsList.includes(slug)) {
+      collectionsList.push(slug);
+      renderCollectionItem(slug);
+      saveCollectionsIndex();
+    }
+    nameInput.value = "";
+    toggleCollectionPopup();
+  }
+
+  function renderCollectionItem(slug) {
+    const div = document.createElement("div");
+    div.className = "item";
+    div.innerHTML =
+      `<span onclick="loadCollection('${slug}')">${slug.toUpperCase()}</span>
+       <span class="item-controls">
+         <button class="icon-btn" onclick="renameCollectionPrompt('${slug}')">✎</button>
+         <button class="icon-btn" onclick="deleteCollection('${slug}')">🗑</button>
+       </span>`;
+    collectionsListContainer.appendChild(div);
+  }
+
+  function renameCollectionPrompt(oldSlug) {
+    const newName = prompt("Rename collection:", oldSlug.toUpperCase());
+    if (!newName) return;
+    const newSlug = newName.trim().toLowerCase();
+    const index = collectionsList.indexOf(oldSlug);
+    if (index !== -1) {
+      collectionsList[index] = newSlug;
       saveCollectionsIndex();
       loadCollectionsList();
     }
+  }
 
-    function loadCollection(slug) {
-      currentMode = "collection";
-      currentSlug = slug;
-      title.textContent = slug.toUpperCase();
-      dateLabel.textContent = "";
-
-      if (!restoreFromCache()) {
-        content.innerHTML = "";
-        ensureVisibleContent();
-      }
-
-      const url = `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/collections/collection-${slug}.html?cb=${Date.now()}`;
-      fetch(url)
-        .then(res => res.ok ? res.text() : Promise.reject())
-        .then(html => {
-          content.innerHTML = html.replace(/<!-- version:.*?-->\n?/i, "");
-          updateStatus("LOADED SYNCED");
-          debounceSave();
-        })
-        .catch(() => updateStatus("OFFLINE"));
-    }
-
-    function saveCollectionsIndex() {
-      fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mode: "collections-index",
-          date: "collections-index",
-          content: btoa(unescape(encodeURIComponent(JSON.stringify(collectionsList))))
-        })
-      });
-    }
-
-    function loadCollectionsList() {
-      collectionsListContainer.innerHTML = "";
-      fetch("https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/collections/collections-index.json")
-        .then(res => res.ok ? res.json() : [])
-        .then(data => {
-          collectionsList = data;
-          data.forEach(renderCollectionItem);
-        })
-        .catch(() => collectionsList = []);
-    }
-
-    function filterIndex() {
-      const q = document.getElementById("index-search").value.toLowerCase();
-      document.querySelectorAll('#index-card .item').forEach(el => {
-        el.style.display = el.textContent.toLowerCase().includes(q) ? "block" : "none";
-      });
-    }
-
+  function deleteCollection(slug) {
+    if (!confirm(`Delete collection "${slug.toUpperCase()}"?`)) return;
+    collectionsList = collectionsList.filter(s => s !== slug);
+    saveCollectionsIndex();
     loadCollectionsList();
-    loadSyncedContent(currentSlug);
-  </script>
+  }
+
+  function saveCollectionsIndex() {
+    fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mode: "collections-index",
+        date: "collections-index",
+        content: btoa(unescape(encodeURIComponent(JSON.stringify(collectionsList))))
+      })
+    });
+  }
+
+  function loadCollectionsList() {
+    collectionsListContainer.innerHTML = "";
+    fetch("https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/collections/collections-index.json")
+      .then(res => res.ok ? res.json() : [])
+      .then(data => {
+        collectionsList = data;
+        data.forEach(renderCollectionItem);
+      })
+      .catch(() => collectionsList = []);
+  }
+
+  function filterIndex() {
+    const q = document.getElementById("index-search").value.toLowerCase();
+    document.querySelectorAll('#index-card .item').forEach(el => {
+      el.style.display = el.textContent.toLowerCase().includes(q) ? "block" : "none";
+    });
+  }
+
+  loadCollectionsList();
+  loadSyncedContent(currentSlug);
+</script>
 </body>
 </html>

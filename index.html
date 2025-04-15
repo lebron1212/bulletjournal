@@ -6,11 +6,8 @@
     <title>Bullet Journal</title>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet" />
     <style>
-      *, ::after, ::before {
-        box-sizing: border-box;
-      }
-
-      body, html {
+      *, ::after, ::before { box-sizing: border-box; }
+      html, body {
         font-family: 'IBM Plex Mono', monospace;
         text-transform: uppercase;
         margin: 0;
@@ -20,11 +17,7 @@
         background: transparent;
         color: #eee;
       }
-
-      body {
-        display: flex;
-        flex-direction: column;
-      }
+      body { display: flex; flex-direction: column; }
 
       #wrapper {
         display: flex;
@@ -39,13 +32,11 @@
           flex-direction: column;
           padding: 20px 16px;
         }
-
         .panel {
           width: 100%;
           margin: 0 0 20px 0;
           padding: 16px;
         }
-
         #journal-panel {
           max-width: 100%;
           padding: 20px;
@@ -95,9 +86,7 @@
         align-items: center;
       }
 
-      .card .item:hover {
-        opacity: 0.7;
-      }
+      .card .item:hover { opacity: 0.7; }
 
       .item-controls {
         display: flex;
@@ -113,9 +102,7 @@
         padding: 0 4px;
       }
 
-      .icon-btn:hover {
-        color: #fff;
-      }
+      .icon-btn:hover { color: #fff; }
 
       .add-collection-link {
         font-size: 0.65rem;
@@ -167,9 +154,7 @@
         cursor: pointer;
       }
 
-      .popup-buttons button:hover {
-        background: #222;
-      }
+      .popup-buttons button:hover { background: #222; }
 
       .header {
         display: flex;
@@ -182,10 +167,7 @@
         position: relative;
       }
 
-      #entry-title {
-        z-index: 1;
-      }
-
+      #entry-title { z-index: 1; }
       #entry-date {
         position: absolute;
         right: 0;
@@ -229,9 +211,7 @@
       }
 
       @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
+        to { transform: rotate(360deg); }
       }
 
       .entry-line {
@@ -313,49 +293,26 @@
       }
 
       @media (prefers-color-scheme: light) {
-        body, html {
+        html, body {
           background: transparent;
           color: #000;
         }
-
-        .card,
-        .panel,
-        .notes,
-        .popup-buttons button {
+        .card, .panel, .notes, .popup-buttons button {
           border-color: #ccc;
           background: none;
           color: #000;
         }
-
-        .card h2,
-        .icon-btn,
-        .add-collection-link,
-        #index-search,
-        #collection-popup input {
+        .card h2, .icon-btn, .add-collection-link,
+        #index-search, #collection-popup input {
           color: #111;
           border-color: #ccc;
           background: none;
         }
-
-        .icon-btn:hover {
-          color: #000;
-        }
-
-        #sync-status {
-          color: #666;
-        }
-
-        .entry-line input[type="checkbox"] {
-          border: 1px solid #000;
-        }
-
-        .entry-line input[type="checkbox"]:checked::after {
-          color: #000;
-        }
-
-        #hide-wrapper {
-          color: #333;
-        }
+        .icon-btn:hover { color: #000; }
+        #sync-status { color: #666; }
+        .entry-line input[type="checkbox"] { border: 1px solid #000; }
+        .entry-line input[type="checkbox"]:checked::after { color: #000; }
+        #hide-wrapper { color: #333; }
       }
     </style>
   </head>
@@ -402,12 +359,10 @@
 
     <script>
       const content = document.getElementById("journal-content");
-      const syncStatus = document.getElementById("sync-status");
-      const spinner = syncStatus.querySelector(".spinner");
-      const label = syncStatus.querySelector(".label");
+      const label = document.querySelector("#sync-status .label");
+      const spinner = document.querySelector("#sync-status .spinner");
       const title = document.getElementById("entry-title");
       const dateLabel = document.getElementById("entry-date");
-      const collectionsListContainer = document.getElementById("collections-list");
 
       let currentMode = "daily";
       let currentSlug = new Date().toISOString().slice(0, 10);
@@ -418,147 +373,77 @@
         spinner.style.display = isSyncing ? "inline-block" : "none";
       }
 
-      function saveContent() {
-        // Force checkbox states into HTML
+      function forceCheckboxAttributes() {
         content.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-          if (cb.checked) cb.setAttribute("checked", "true");
+          if (cb.checked) cb.setAttribute("checked", "checked");
           else cb.removeAttribute("checked");
         });
+      }
 
+      function saveContent() {
+        forceCheckboxAttributes();
         const version = `<!-- version:${new Date().toISOString()} -->`;
-        const htmlWithVersion = version + "\n" + content.innerHTML;
-
-        const encoded = btoa(unescape(encodeURIComponent(htmlWithVersion)));
-        localStorage.setItem(`bujocache-${currentMode}-${currentSlug}`, encoded);
+        const html = version + "\n" + content.innerHTML;
+        const encoded = btoa(unescape(encodeURIComponent(html)));
+        const key = `bujocache-${currentMode}-${currentSlug}`;
+        localStorage.setItem(key, encoded);
 
         updateStatus("SYNCING...", true);
-        const payload = {
-          date: currentSlug,
-          content: encoded,
-          mode: currentMode
-        };
-
         fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
+          body: JSON.stringify({ date: currentSlug, content: encoded, mode: currentMode })
         })
-        .then(res => {
-          if (res.ok) updateStatus("SYNCED");
-          else updateStatus("NETLIFY ERROR");
-        })
+        .then(res => updateStatus(res.ok ? "SYNCED" : "NETLIFY ERROR"))
         .catch(() => updateStatus("APPTION ERROR"));
       }
 
       function debounceSave() {
         clearTimeout(window._saveTimeout);
-        window._saveTimeout = setTimeout(saveContent, 2000);
-      }
-
-      function handleCheckboxToggle(e) {
-        const checkbox = e.target;
-        const entry = checkbox.closest('.entry-line');
-        entry.classList.toggle('done', checkbox.checked);
-        if (document.getElementById("hide-completed").checked) toggleCompleted();
-        debounceSave();
-      }
-
-      function ensureVisibleContent() {
-        if (content.innerHTML.trim() === '') {
-          const div = document.createElement('div');
-          div.className = 'entry-line';
-
-          const checkbox = document.createElement('input');
-          checkbox.type = 'checkbox';
-          checkbox.addEventListener('change', handleCheckboxToggle);
-
-          const text = document.createElement('div');
-          text.className = 'line-text';
-          text.contentEditable = true;
-          text.innerHTML = 'Start writing...';
-
-          div.appendChild(checkbox);
-          div.appendChild(text);
-          content.appendChild(div);
-        }
+        window._saveTimeout = setTimeout(saveContent, 1500);
       }
 
       function restoreFromCache() {
         const key = `bujocache-${currentMode}-${currentSlug}`;
         const cached = localStorage.getItem(key);
         if (cached) {
-          const decoded = decodeURIComponent(escape(atob(cached)));
-          const cleaned = decoded.replace(/<!-- version:.*?-->\n?/i, "");
-          content.innerHTML = cleaned;
+          const html = decodeURIComponent(escape(atob(cached))).replace(/<!-- version:.*?-->\n?/i, "");
+          content.innerHTML = html;
           updateStatus("LOADED CACHED");
           return true;
         }
         return false;
       }
 
+      function ensureVisibleContent() {
+        if (content.innerHTML.trim() === '') {
+          const div = document.createElement("div");
+          div.className = "entry-line";
+
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.addEventListener("change", debounceSave);
+
+          const text = document.createElement("div");
+          text.className = "line-text";
+          text.contentEditable = true;
+          text.innerHTML = "Start writing...";
+
+          div.appendChild(checkbox);
+          div.appendChild(text);
+          content.appendChild(div);
+        }
+      }
+
       function toggleCompleted() {
         const hide = document.getElementById("hide-completed").checked;
         document.querySelectorAll(".entry-line").forEach(el => {
-          const cb = el.querySelector('input[type=checkbox]');
+          const cb = el.querySelector('input[type="checkbox"]');
           const done = cb?.checked;
           el.classList.toggle('done', done);
           el.style.display = hide && done ? "none" : "flex";
         });
       }
-
-      function reapplyHideCompleted() {
-        toggleCompleted();
-      }
-
-      content.addEventListener("DOMSubtreeModified", reapplyHideCompleted);
-      content.addEventListener("input", debounceSave);
-      content.addEventListener("change", debounceSave);
-
-      content.addEventListener("keydown", e => {
-        const isMac = navigator.platform.toUpperCase().includes("MAC");
-        const meta = isMac ? e.metaKey : e.ctrlKey;
-
-        if (meta && e.key.toLowerCase() === "b") { document.execCommand("bold"); e.preventDefault(); }
-        if (meta && e.key.toLowerCase() === "i") { document.execCommand("italic"); e.preventDefault(); }
-        if (meta && e.key.toLowerCase() === "u") { document.execCommand("underline"); e.preventDefault(); }
-
-        if (e.key === "Enter") {
-          e.preventDefault();
-          const div = document.createElement('div');
-          div.className = 'entry-line';
-
-          const checkbox = document.createElement('input');
-          checkbox.type = 'checkbox';
-          checkbox.addEventListener('change', handleCheckboxToggle);
-
-          const text = document.createElement('div');
-          text.className = 'line-text';
-          text.contentEditable = true;
-          text.innerHTML = '&nbsp;';
-
-          div.appendChild(checkbox);
-          div.appendChild(text);
-          content.appendChild(div);
-
-          const range = document.createRange();
-          const sel = window.getSelection();
-          range.setStart(text, 0);
-          range.collapse(true);
-          sel.removeAllRanges();
-          sel.addRange(range);
-
-          reapplyHideCompleted();
-          debounceSave();
-        }
-
-        const active = document.activeElement;
-        if (["ArrowUp", "ArrowDown"].includes(e.key) && active.classList.contains("line-text")) {
-          const lines = [...document.querySelectorAll(".line-text")];
-          const idx = lines.indexOf(active);
-          if (e.key === "ArrowUp" && idx > 0) lines[idx - 1].focus();
-          if (e.key === "ArrowDown" && idx < lines.length - 1) lines[idx + 1].focus();
-        }
-      });
 
       function loadSyncedContent(date) {
         currentMode = "daily";
@@ -567,7 +452,7 @@
         dateLabel.textContent = date;
 
         if (!restoreFromCache()) {
-          content.innerHTML = '';
+          content.innerHTML = "";
           ensureVisibleContent();
         }
 
@@ -575,31 +460,16 @@
         fetch(url)
           .then(res => res.ok ? res.text() : Promise.reject())
           .then(html => {
-            const versionMatch = html.match(/<!-- version:(.*?)-->/i);
-            const remoteVersion = versionMatch ? new Date(versionMatch[1]) : null;
-
-            const local = localStorage.getItem(`bujocache-${currentMode}-${currentSlug}`);
-            let localVersion = null;
-            if (local) {
-              const decoded = decodeURIComponent(escape(atob(local)));
-              const match = decoded.match(/<!-- version:(.*?)-->/i);
-              localVersion = match ? new Date(match[1]) : null;
-            }
-
-            if (!local || (remoteVersion && (!localVersion || remoteVersion > localVersion))) {
+            const remoteVersion = (html.match(/<!-- version:(.*?)-->/i) || [])[1];
+            if (remoteVersion) {
               content.innerHTML = html.replace(/<!-- version:.*?-->\n?/i, "");
-              updateStatus("LOADED SYNCED (NEWER)");
-              saveContent(); // update local cache
-            } else {
-              updateStatus("KEPT LOCAL");
+              updateStatus("LOADED SYNCED");
+              debounceSave(); // re-save locally
             }
           })
-          .catch(() => {
-            updateStatus("OFFLINE ONLY");
-          });
+          .catch(() => updateStatus("OFFLINE"));
       }
 
-      // Collection logic remains unchanged...
       document.querySelector('[data-entry="today"]').addEventListener("click", () => {
         loadSyncedContent(new Date().toISOString().slice(0, 10));
       });
@@ -610,8 +480,142 @@
         loadSyncedContent(d.toISOString().slice(0, 10));
       });
 
+      content.addEventListener("input", debounceSave);
+      content.addEventListener("change", debounceSave);
+      content.addEventListener("keydown", e => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          const div = document.createElement("div");
+          div.className = "entry-line";
+
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.addEventListener("change", debounceSave);
+
+          const text = document.createElement("div");
+          text.className = "line-text";
+          text.contentEditable = true;
+          text.innerHTML = "&nbsp;";
+
+          div.appendChild(checkbox);
+          div.appendChild(text);
+          content.appendChild(div);
+
+          const sel = window.getSelection();
+          const range = document.createRange();
+          range.setStart(text, 0);
+          range.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(range);
+
+          debounceSave();
+        }
+      });
+
+      function filterIndex() {
+        const q = document.getElementById("index-search").value.toLowerCase();
+        document.querySelectorAll('#index-card .item').forEach(el => {
+          el.style.display = el.textContent.toLowerCase().includes(q) ? "block" : "none";
+        });
+      }
+
+      function toggleCollectionPopup() {
+        const popup = document.getElementById("collection-popup");
+        popup.style.display = popup.style.display === "flex" ? "none" : "flex";
+      }
+
+      function createCollection() {
+        const nameInput = document.getElementById("new-collection-name");
+        const name = nameInput.value.trim();
+        if (!name) return;
+        const slug = name.toLowerCase();
+        if (!collectionsList.includes(slug)) {
+          collectionsList.push(slug);
+          renderCollectionItem(slug);
+          saveCollectionsIndex();
+        }
+        nameInput.value = "";
+        toggleCollectionPopup();
+      }
+
+      function renderCollectionItem(slug) {
+        const div = document.createElement("div");
+        div.className = "item";
+        div.innerHTML =
+          `<span onclick="loadCollection('${slug}')">${slug.toUpperCase()}</span>
+           <span class="item-controls">
+             <button class="icon-btn" onclick="renameCollection('${slug}')">✎</button>
+             <button class="icon-btn" onclick="deleteCollection('${slug}')">🗑</button>
+           </span>`;
+        document.getElementById("collections-list").appendChild(div);
+      }
+
+      function loadCollection(slug) {
+        currentMode = "collection";
+        currentSlug = slug;
+        title.textContent = slug.toUpperCase();
+        dateLabel.textContent = "";
+
+        if (!restoreFromCache()) {
+          content.innerHTML = "";
+          ensureVisibleContent();
+        }
+
+        const url = `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/collections/collection-${slug}.html?cb=${Date.now()}`;
+        fetch(url)
+          .then(res => res.ok ? res.text() : Promise.reject())
+          .then(html => {
+            content.innerHTML = html.replace(/<!-- version:.*?-->\n?/i, "");
+            updateStatus("LOADED SYNCED");
+            debounceSave();
+          })
+          .catch(() => updateStatus("OFFLINE"));
+      }
+
+      function saveCollectionsIndex() {
+        fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mode: "collections-index",
+            date: "collections-index",
+            content: btoa(unescape(encodeURIComponent(JSON.stringify(collectionsList))))
+          })
+        });
+      }
+
+      function renameCollection(slug) {
+        const newName = prompt("Rename collection:", slug.toUpperCase());
+        if (!newName) return;
+        const newSlug = newName.trim().toLowerCase();
+        const index = collectionsList.indexOf(slug);
+        if (index !== -1) {
+          collectionsList[index] = newSlug;
+          loadCollectionsList();
+          saveCollectionsIndex();
+        }
+      }
+
+      function deleteCollection(slug) {
+        if (!confirm(`Delete collection "${slug.toUpperCase()}"?`)) return;
+        collectionsList = collectionsList.filter(s => s !== slug);
+        loadCollectionsList();
+        saveCollectionsIndex();
+      }
+
+      function loadCollectionsList() {
+        document.getElementById("collections-list").innerHTML = "";
+        fetch("https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/collections/collections-index.json")
+          .then(res => res.ok ? res.json() : [])
+          .then(data => {
+            collectionsList = data;
+            data.forEach(renderCollectionItem);
+          })
+          .catch(() => collectionsList = []);
+      }
+
       loadCollectionsList();
-      loadSyncedContent(new Date().toISOString().slice(0, 10));
+      loadSyncedContent(currentSlug);
     </script>
   </body>
 </html>

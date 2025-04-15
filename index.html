@@ -292,6 +292,25 @@
         transform: scale(1.2);
       }
 
+      #jump-wrapper {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        font-size: 0.65rem;
+        display: flex;
+        gap: 4px;
+      }
+
+      #jump-wrapper input[type="date"] {
+        background: none;
+        color: #eee;
+        border: 1px solid #444;
+        padding: 3px 6px;
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 0.65rem;
+        text-transform: none;
+      }
+
       @media (prefers-color-scheme: light) {
         html, body {
           background: transparent;
@@ -313,17 +332,22 @@
         .entry-line input[type="checkbox"] { border: 1px solid #000; }
         .entry-line input[type="checkbox"]:checked::after { color: #000; }
         #hide-wrapper { color: #333; }
+        #jump-wrapper input[type="date"] {
+          color: #111;
+          border-color: #aaa;
+        }
       }
     </style>
   </head>
   <body>
-    <div id="wrapper">
+        <div id="wrapper">
       <div class="panel">
         <div id="index-card" class="card">
           <h2>INDEX</h2>
           <input id="index-search" placeholder="search YYYY-MM-DD" oninput="filterIndex()" />
           <div class="item" data-entry="today">TODAY</div>
           <div class="item" data-entry="yesterday">YESTERDAY</div>
+          <div class="item" data-entry="tomorrow">TOMORROW</div>
         </div>
         <div id="collections-card" class="card">
           <h2>COLLECTIONS</h2>
@@ -343,6 +367,9 @@
         <div class="header">
           <div id="entry-title">DAILY LOG</div>
           <div id="entry-date">TODAY</div>
+          <div id="jump-wrapper">
+            <input type="date" id="jump-date" onchange="jumpToDate(this.value)" />
+          </div>
         </div>
         <div id="journal-content" class="notes" contenteditable="true"></div>
       </div>
@@ -363,6 +390,7 @@
       const spinner = document.querySelector("#sync-status .spinner");
       const title = document.getElementById("entry-title");
       const dateLabel = document.getElementById("entry-date");
+      const collectionsListContainer = document.getElementById("collections-list");
 
       let currentMode = "daily";
       let currentSlug = new Date().toISOString().slice(0, 10);
@@ -400,7 +428,7 @@
 
       function debounceSave() {
         clearTimeout(window._saveTimeout);
-        window._saveTimeout = setTimeout(saveContent, 1500);
+        window._saveTimeout = setTimeout(saveContent, 1200);
       }
 
       function restoreFromCache() {
@@ -449,7 +477,7 @@
         currentMode = "daily";
         currentSlug = date;
         title.textContent = "DAILY LOG";
-        dateLabel.textContent = date;
+        dateLabel.textContent = formatRelativeDate(date);
 
         if (!restoreFromCache()) {
           content.innerHTML = "";
@@ -460,14 +488,26 @@
         fetch(url)
           .then(res => res.ok ? res.text() : Promise.reject())
           .then(html => {
-            const remoteVersion = (html.match(/<!-- version:(.*?)-->/i) || [])[1];
-            if (remoteVersion) {
-              content.innerHTML = html.replace(/<!-- version:.*?-->\n?/i, "");
-              updateStatus("LOADED SYNCED");
-              debounceSave(); // re-save locally
-            }
+            content.innerHTML = html.replace(/<!-- version:.*?-->\n?/i, "");
+            updateStatus("LOADED SYNCED");
+            debounceSave();
           })
           .catch(() => updateStatus("OFFLINE"));
+      }
+
+      function formatRelativeDate(dateStr) {
+        const today = new Date();
+        const target = new Date(dateStr);
+        const diff = Math.floor((target - today) / (1000 * 60 * 60 * 24));
+        if (diff === 0) return "TODAY";
+        if (diff === -1) return "YESTERDAY";
+        if (diff === 1) return "TOMORROW";
+        return dateStr;
+      }
+
+      function jumpToDate(dateStr) {
+        if (!dateStr) return;
+        loadSyncedContent(dateStr);
       }
 
       document.querySelector('[data-entry="today"]').addEventListener("click", () => {
@@ -480,8 +520,15 @@
         loadSyncedContent(d.toISOString().slice(0, 10));
       });
 
+      document.querySelector('[data-entry="tomorrow"]').addEventListener("click", () => {
+        const d = new Date();
+        d.setDate(d.getDate() + 1);
+        loadSyncedContent(d.toISOString().slice(0, 10));
+      });
+
       content.addEventListener("input", debounceSave);
       content.addEventListener("change", debounceSave);
+
       content.addEventListener("keydown", e => {
         if (e.key === "Enter") {
           e.preventDefault();
@@ -512,13 +559,6 @@
         }
       });
 
-      function filterIndex() {
-        const q = document.getElementById("index-search").value.toLowerCase();
-        document.querySelectorAll('#index-card .item').forEach(el => {
-          el.style.display = el.textContent.toLowerCase().includes(q) ? "block" : "none";
-        });
-      }
-
       function toggleCollectionPopup() {
         const popup = document.getElementById("collection-popup");
         popup.style.display = popup.style.display === "flex" ? "none" : "flex";
@@ -547,7 +587,7 @@
              <button class="icon-btn" onclick="renameCollection('${slug}')">✎</button>
              <button class="icon-btn" onclick="deleteCollection('${slug}')">🗑</button>
            </span>`;
-        document.getElementById("collections-list").appendChild(div);
+        collectionsListContainer.appendChild(div);
       }
 
       function loadCollection(slug) {
@@ -591,20 +631,20 @@
         const index = collectionsList.indexOf(slug);
         if (index !== -1) {
           collectionsList[index] = newSlug;
-          loadCollectionsList();
           saveCollectionsIndex();
+          loadCollectionsList();
         }
       }
 
       function deleteCollection(slug) {
         if (!confirm(`Delete collection "${slug.toUpperCase()}"?`)) return;
         collectionsList = collectionsList.filter(s => s !== slug);
-        loadCollectionsList();
         saveCollectionsIndex();
+        loadCollectionsList();
       }
 
       function loadCollectionsList() {
-        document.getElementById("collections-list").innerHTML = "";
+        collectionsListContainer.innerHTML = "";
         fetch("https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/collections/collections-index.json")
           .then(res => res.ok ? res.json() : [])
           .then(data => {
@@ -614,8 +654,16 @@
           .catch(() => collectionsList = []);
       }
 
+      function filterIndex() {
+        const q = document.getElementById("index-search").value.toLowerCase();
+        document.querySelectorAll('#index-card .item').forEach(el => {
+          el.style.display = el.textContent.toLowerCase().includes(q) ? "block" : "none";
+        });
+      }
+
       loadCollectionsList();
       loadSyncedContent(currentSlug);
     </script>
   </body>
 </html>
+

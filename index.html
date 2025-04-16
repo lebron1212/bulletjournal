@@ -12,8 +12,8 @@
       font-family: 'IBM Plex Mono', monospace;
       margin: 0;
       padding: 0;
-      width: 100%;
       height: 100%;
+      width: 100%;
       background: transparent;
       color: #eee;
       text-transform: uppercase;
@@ -27,8 +27,9 @@
       padding: 40px 20px;
       width: 100%;
       gap: 32px;
-      overflow: hidden;
+      height: 100%;
     }
+
     @media (max-width: 700px) {
       #wrapper {
         flex-direction: column;
@@ -49,7 +50,8 @@
       width: 220px;
       flex-shrink: 0;
       padding: 28px;
-      position: relative;
+      overflow-y: auto;
+      max-height: calc(100vh - 60px);
     }
 
     .card {
@@ -73,124 +75,11 @@
       position: absolute;
       top: 10px;
       right: 12px;
-      font-size: 0.7rem;
-      background: none;
-      border: 1px solid #666;
-      color: #eee;
-      padding: 0px 5px 1px;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
-    #calendar-popup {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: #111;
-      padding: 20px;
-      border: 1px solid #444;
-      border-radius: 12px;
-      z-index: 1001;
-      display: none;
-      width: 300px;
-      max-width: 90vw;
-      color: #fff;
-    }
-
-    #calendar-popup h3 {
-      font-size: 0.75rem;
-      margin: 0 0 6px;
-      text-align: center;
-    }
-
-    #calendar-popup p {
-      font-size: 0.65rem;
-      margin: 0 0 12px;
-      text-align: center;
-    }
-
-    #calendar-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 0.7rem;
-      margin-bottom: 10px;
-    }
-
-    #calendar-header button {
+      font-size: 1.2rem;
       background: none;
       border: none;
-      color: inherit;
-      font-size: 1.1rem;
-      cursor: pointer;
-      padding: 2px 6px;
-    }
-
-    #calendar-grid {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 6px;
-      margin-bottom: 12px;
-    }
-
-    .calendar-day {
-      font-size: 0.65rem;
-      text-align: center;
-      padding: 6px 0;
-      border: 1px solid #444;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
-    .calendar-day:hover {
-      background: #222;
-    }
-
-    .calendar-today {
-      border-color: #0af;
-      font-weight: bold;
-    }
-
-    .calendar-selected {
-      border: 1px solid #fff;
-      background: #333;
-    }
-
-    .calendar-popup-buttons {
-      display: flex;
-      gap: 8px;
-    }
-
-    .calendar-popup-buttons button {
-      flex: 1;
-      padding: 6px;
-      font-size: 0.65rem;
-      text-transform: uppercase;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      border-radius: 6px;
-      background: none;
-      color: #fff;
-      border: 1px solid #fff;
-      cursor: pointer;
-    }
-
-    .calendar-popup-buttons button:hover {
-      background: #222;
-    }
-
-    #index-search {
-      display: block;
-      width: 100%;
-      font-size: 0.7rem;
-      letter-spacing: 0.08em;
-      margin: 12px 0;
-      padding: 6px 8px;
-      background: none;
-      border: 1px solid #444;
-      border-radius: 6px;
       color: #eee;
+      cursor: pointer;
     }
 
     .item {
@@ -198,9 +87,10 @@
       letter-spacing: 0.03em;
       cursor: pointer;
       margin-bottom: 8px;
+      transition: opacity 0.2s;
+      color: #888;
       display: flex;
       justify-content: space-between;
-      color: #888;
     }
 
     .item.active {
@@ -235,29 +125,40 @@
       display: inline-block;
     }
 
-    #collection-popup {
-      display: none;
-      flex-direction: column;
-      gap: 10px;
-      margin-top: 10px;
+    .popup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%,-50%);
+      background: #111;
+      padding: 20px;
+      border: 1px solid #444;
+      border-radius: 12px;
+      z-index: 1002;
+      color: #fff;
+      width: 260px;
+      max-width: 90vw;
     }
 
-    #collection-popup input {
+    .popup h3 {
+      font-size: 0.75rem;
+      margin: 0 0 8px;
+    }
+
+    .popup input {
       width: 100%;
       padding: 6px;
-      border: 1px solid #444;
-      border-radius: 4px;
       font-family: 'IBM Plex Mono', monospace;
-      font-size: 0.75rem;
-      text-transform: none;
       background: none;
+      border: 1px solid #444;
       color: #fff;
+      font-size: 0.75rem;
+      margin-bottom: 10px;
     }
 
     .popup-buttons {
       display: flex;
       gap: 8px;
-      margin-top: 4px;
     }
 
     .popup-buttons button {
@@ -265,8 +166,8 @@
       padding: 6px;
       font-size: 0.65rem;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
       font-weight: 700;
+      letter-spacing: 0.08em;
       border-radius: 6px;
       background: none;
       color: #fff;
@@ -282,40 +183,21 @@
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      margin-bottom: 20px;
       font-size: 0.8rem;
       font-weight: 700;
       letter-spacing: 0.08em;
+      margin-bottom: 20px;
       position: relative;
     }
 
-    #entry-title {
-      margin-right: 10px;
-    }
-
     #entry-date {
-      font-size: 0.7rem;
+      font-size: 0.65rem;
+      color: #888;
       font-weight: 400;
-      color: #aaa;
+      margin-top: 2px;
     }
 
-    .drag-toggle-btn {
-      position: absolute;
-      right: 0;
-      top: 0;
-      font-size: 1rem;
-      border: none;
-      background: none;
-      color: #999;
-      cursor: pointer;
-      padding: 4px;
-    }
-
-    .drag-toggle-btn.active {
-      color: #0af;
-    }
-
-    #journal-content.notes {
+    .notes[contenteditable=true] {
       outline: 0;
       flex-grow: 1;
       font-size: 0.85rem;
@@ -323,7 +205,7 @@
       letter-spacing: 0.04em;
       background: none;
       overflow-y: auto;
-      max-height: calc(100vh - 140px);
+      height: calc(100vh - 160px);
     }
 
     .entry-line {
@@ -332,11 +214,6 @@
       gap: 10px;
       margin-bottom: 12px;
       cursor: grab;
-      position: relative;
-    }
-
-    .entry-line.drag-enabled .drag-handle {
-      display: inline-block;
     }
 
     .drag-handle {
@@ -348,17 +225,8 @@
       opacity: 0.5;
     }
 
-    .drag-ghost {
-      opacity: 0.3;
-    }
-
-    .drop-line {
-      position: absolute;
-      height: 2px;
-      background: #0af;
-      left: 0;
-      right: 0;
-      top: -1px;
+    .entry-line.drag-enabled .drag-handle {
+      display: inline-block;
     }
 
     .entry-line input[type=checkbox] {
@@ -397,25 +265,20 @@
       opacity: 0.5;
     }
 
-    #hide-wrapper {
-      position: fixed;
-      bottom: 12px;
-      left: 12px;
-      font-size: 0.6rem;
-      color: #aaa;
+    .drag-toggle-btn {
+      position: absolute;
+      right: 0;
+      top: 0;
+      font-size: 1.1rem;
       background: none;
-      padding: 4px 6px;
-      border-radius: 6px;
-      user-select: none;
-      z-index: 1000;
-      display: flex;
-      align-items: center;
-      gap: 6px;
+      border: none;
+      color: #999;
+      cursor: pointer;
+      padding: 4px;
     }
 
-    #hide-wrapper input {
-      transform: scale(1.1);
-      margin: 0;
+    .drag-toggle-btn.active {
+      color: #0af;
     }
 
     #sync-status {
@@ -450,78 +313,52 @@
     }
 
     @media (prefers-color-scheme: light) {
-      html, body { color: #000; }
+      html, body {
+        background: transparent;
+        color: #000;
+      }
       .card, .panel, .notes, .popup-buttons button {
         border-color: #ccc;
         color: #000;
       }
-      .card .item { color: #333; }
-      .card .item.active { color: #000; font-weight: bold; }
+      .item { color: #444; }
+      .item.active { color: #000; font-weight: bold; }
       .icon-btn { color: #666; }
       .icon-btn:hover { color: #000; }
-      #index-search, #collection-popup input, .popup-buttons button {
-        color: #111;
-        border-color: #aaa;
-      }
-      #calendar-popup {
+      .popup {
         background: #fff;
         color: #000;
         border-color: #aaa;
       }
-      .calendar-day {
+      .popup input, .popup-buttons button {
+        color: #111;
         border-color: #aaa;
-        color: #000;
+        background: none;
       }
-      .calendar-day:hover { background: #eee; }
-      .calendar-popup-buttons button {
-        color: #000;
-        border-color: #000;
-      }
-      #calendar-popup input[type="date"] {
-        color: #000;
-        border-color: #aaa;
-      }
-      #calendar-btn, .drag-toggle-btn {
-        color: #000;
-        border-color: #000;
-      }
+      .drag-toggle-btn, #calendar-btn { color: #000; }
       .entry-line input[type="checkbox"] { border-color: #000; }
       .entry-line input[type="checkbox"]:checked::after { color: #000; }
-      #hide-wrapper { color: #333; }
     }
   </style>
+</head>
 <body>
   <div id="wrapper">
     <div class="panel">
       <div class="card" id="index-card">
         <h2>INDEX</h2>
-        <button id="calendar-btn">+</button>
-        <div id="calendar-popup">
-          <h3>DATE INPUT</h3>
-          <p>PLEASE INPUT THE DATE YOU'D LIKE TO CREATE</p>
-          <div id="calendar-header">
-            <button id="prev-month">&#8592;</button>
-            <span id="calendar-month"></span>
-            <button id="next-month">&#8594;</button>
-          </div>
-          <div id="calendar-grid"></div>
-          <div class="calendar-popup-buttons">
-            <button id="calendar-create">CREATE</button>
-            <button onclick="calendarPopup.style.display='none'">CANCEL</button>
-          </div>
-        </div>
-        <input id="index-search" placeholder="search YYYY-MM-DD" oninput="filterIndex()" />
-        <div class="item" id="yesterday-entry" data-entry="">YESTERDAY</div>
-        <div class="item" id="today-entry" data-entry="">TODAY</div>
-        <div class="item" id="tomorrow-entry" data-entry="">TOMORROW</div>
-        <h2 style="margin-top:18px;">RECENTS</h2>
+        <button id="calendar-btn" title="Create new date">+</button>
+        <div class="item" data-entry="yesterday">YESTERDAY</div>
+        <div class="item" data-entry="today">TODAY</div>
+        <div class="item" data-entry="tomorrow">TOMORROW</div>
+        <h2 style="margin-top: 18px;">RECENTS</h2>
         <div id="recent-entries"></div>
       </div>
 
       <div id="collections-card" class="card">
         <h2>COLLECTIONS</h2>
         <span class="add-collection-link" onclick="toggleCollectionPopup()">+ ADD</span>
-        <div id="collection-popup">
+        <div id="collection-popup" style="display:none;" class="popup">
+          <h3>NEW COLLECTION</h3>
           <input id="new-collection-name" placeholder="Collection name" />
           <div class="popup-buttons">
             <button onclick="createCollection()">SAVE</button>
@@ -534,11 +371,11 @@
 
     <div id="journal-panel">
       <div class="header">
-        <div style="display: flex; align-items: baseline;">
+        <div style="display: flex; flex-direction: column;">
           <div id="entry-title">DAILY LOG</div>
-          <div id="entry-date"></div>
+          <div id="entry-date">MON, APR 14</div>
         </div>
-        <button class="drag-toggle-btn" id="dragToggleBtn" title="Reorder Mode">☰</button>
+        <button class="drag-toggle-btn" id="dragToggleBtn" title="Toggle reorder mode">☰</button>
       </div>
       <div id="journal-content" class="notes" contenteditable="true"></div>
     </div>
@@ -549,27 +386,36 @@
     <span class="label">SYNCED</span>
   </div>
 
-  <div id="hide-wrapper">
-    <label><input type="checkbox" id="hide-completed" onchange="toggleCompleted()" /> HIDE COMPLETED</label>
-  </div>
-
-  <!-- RENAME MODAL -->
-  <div id="rename-popup" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#111; color:#fff; padding:20px; border:1px solid #444; border-radius:10px; z-index:1002; width:260px; max-width:90vw;">
-    <h3 style="font-size:0.75rem; margin:0 0 8px;">RENAME COLLECTION</h3>
-    <input id="rename-input" placeholder="New name" style="width:100%; padding:6px; font-family:'IBM Plex Mono', monospace; background:none; border:1px solid #444; color:#fff; font-size:0.75rem; margin-bottom:10px;" />
+  <div id="rename-popup" class="popup" style="display:none;">
+    <h3>RENAME COLLECTION</h3>
+    <input id="rename-input" placeholder="New name" />
     <div class="popup-buttons">
       <button onclick="confirmRename()">SAVE</button>
       <button onclick="hideRenamePopup()">CANCEL</button>
     </div>
   </div>
 
-  <!-- DELETE MODAL -->
-  <div id="delete-popup" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#111; color:#fff; padding:20px; border:1px solid #444; border-radius:10px; z-index:1002; width:260px; max-width:90vw;">
-    <h3 style="font-size:0.75rem; margin:0 0 8px;">DELETE COLLECTION</h3>
-    <p style="font-size:0.65rem; margin-bottom:12px;">Are you sure you want to delete this collection?</p>
+  <div id="delete-popup" class="popup" style="display:none;">
+    <h3>DELETE COLLECTION</h3>
+    <p style="font-size: 0.65rem; margin-bottom: 12px;">Are you sure you want to delete this collection?</p>
     <div class="popup-buttons">
       <button onclick="confirmDelete()">DELETE</button>
       <button onclick="hideDeletePopup()">CANCEL</button>
+    </div>
+  </div>
+
+  <div id="calendar-popup" class="popup" style="display:none;">
+    <h3>DATE INPUT</h3>
+    <p style="font-size: 0.65rem;">PLEASE INPUT THE DATE YOU'D LIKE TO CREATE</p>
+    <div id="calendar-header" style="display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; margin-bottom: 10px;">
+      <button id="prev-month">&#8592;</button>
+      <span id="calendar-month"></span>
+      <button id="next-month">&#8594;</button>
+    </div>
+    <div id="calendar-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 12px;"></div>
+    <div class="calendar-popup-buttons popup-buttons">
+      <button id="calendar-create">CREATE</button>
+      <button onclick="calendarPopup.style.display='none'">CANCEL</button>
     </div>
   </div>
 <script>
@@ -577,34 +423,26 @@ let currentMode = "daily";
 let currentSlug = new Date().toISOString().slice(0, 10);
 let collectionsList = [];
 let recentEntries = [];
-
-const content = document.getElementById("journal-content");
-const dateLabel = document.getElementById("entry-date");
-const title = document.getElementById("entry-title");
-const calendarPopup = document.getElementById("calendar-popup");
-const calendarGrid = document.getElementById("calendar-grid");
-const calendarMonthLabel = document.getElementById("calendar-month");
-
+let selectedCalendarSlug = null;
+let renameTargetSlug = "";
+let deleteTargetSlug = "";
 let dragMode = false;
 let calendarDate = new Date();
-let selectedCalendarSlug = null;
-let renameTargetSlug = "", deleteTargetSlug = "";
 
-// --- UTILITY FUNCTIONS ---
+const content = document.getElementById("journal-content");
+const title = document.getElementById("entry-title");
+const dateLabel = document.getElementById("entry-date");
+const calendarPopup = document.getElementById("calendar-popup");
 
-function getLocalKey(mode, slug) {
+function getKey(mode, slug) {
   return `bujocache-${mode}-${slug}`;
 }
 
-function extractVersion(html) {
-  const match = html.match(/<!-- version:(.*?)-->/);
-  return match ? new Date(match[1]) : new Date(0);
+function encodeHTML(str) {
+  return btoa(unescape(encodeURIComponent(str)));
 }
-
-function forceCheckboxAttributes() {
-  content.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-    cb.checked ? cb.setAttribute("checked", "checked") : cb.removeAttribute("checked");
-  });
+function decodeHTML(str) {
+  return decodeURIComponent(escape(atob(str)));
 }
 
 function updateStatus(text, isSyncing = false) {
@@ -614,73 +452,60 @@ function updateStatus(text, isSyncing = false) {
   spinner.style.display = isSyncing ? "inline-block" : "none";
 }
 
-// --- SAVE & SYNC ---
-
-function saveToLocal() {
-  forceCheckboxAttributes();
+function saveLocal() {
   const html = `<!-- version:${new Date().toISOString()} -->\n${content.innerHTML}`;
-  localStorage.setItem(getLocalKey(currentMode, currentSlug), btoa(unescape(encodeURIComponent(html))));
+  localStorage.setItem(getKey(currentMode, currentSlug), encodeHTML(html));
 }
 
-function syncToRemote() {
+function syncRemote() {
   const html = `<!-- version:${new Date().toISOString()} -->\n${content.innerHTML}`;
-  const encoded = btoa(unescape(encodeURIComponent(html)));
   updateStatus("SYNCING...", true);
   fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ date: currentSlug, content: encoded, mode: currentMode })
-  })
-  .then(res => updateStatus(res.ok ? "SYNCED" : "NETLIFY ERROR"))
-  .catch(() => updateStatus("APPTION ERROR"));
+    body: JSON.stringify({
+      date: currentSlug,
+      content: encodeHTML(html),
+      mode: currentMode
+    })
+  }).then(res => {
+    updateStatus(res.ok ? "SYNCED" : "NETLIFY ERROR");
+  }).catch(() => updateStatus("SYNC FAILED"));
 }
 
 function debounceSync() {
   clearTimeout(window._syncTimeout);
-  window._syncTimeout = setTimeout(syncToRemote, 1000);
+  window._syncTimeout = setTimeout(syncRemote, 1000);
 }
 
-// --- LOAD CONTENT ---
-
-function loadContent(mode, slug, label, sourceUrl) {
-  currentMode = mode;
-  currentSlug = slug;
-  title.textContent = label;
-  dateLabel.textContent = mode === "daily" ? formatPrettyDate(slug) : "";
-
-  if (mode === "daily" && !["yesterday", "today", "tomorrow"].includes(slug)) updateRecents(slug);
-
-  const local = localStorage.getItem(getLocalKey(mode, slug));
-  const fetchRemote = fetch(sourceUrl).then(res => res.ok ? res.text() : null);
-
-  if (local) {
-    const decoded = decodeURIComponent(escape(atob(local)));
-    content.innerHTML = decoded.replace(/<!-- version:.*?-->\n?/, "");
-    updateStatus("LOADED CACHED");
-  } else {
-    content.innerHTML = "";
-  }
-
-  fetchRemote.then(remote => {
-    if (remote) {
-      const localVer = extractVersion(decodeURIComponent(escape(atob(local || ""))));
-      const remoteVer = extractVersion(remote);
-      if (remoteVer > localVer) {
-        content.innerHTML = remote.replace(/<!-- version:.*?-->\n?/, "");
-        localStorage.setItem(getLocalKey(mode, slug), btoa(unescape(encodeURIComponent(remote))));
-        updateStatus("LOADED SYNCED");
-      }
-    }
-    debounceSync();
+function forceCheckboxAttrs() {
+  content.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.checked ? cb.setAttribute("checked", "checked") : cb.removeAttribute("checked");
   });
-
-  ensureVisibleContent();
-  highlightActive(slug);
 }
 
-// --- ENTRY BEHAVIOR ---
+function saveContent() {
+  forceCheckboxAttrs();
+  saveLocal();
+  debounceSync();
+}
 
-function ensureVisibleContent() {
+function extractVersion(html) {
+  const match = html.match(/<!-- version:(.*?)-->/);
+  return match ? new Date(match[1]) : new Date(0);
+}
+
+function formatPrettyDate(dateStr) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }).toUpperCase();
+}
+
+function highlightActive(slug) {
+  document.querySelectorAll(".item").forEach(i => i.classList.remove("active"));
+  document.querySelector(`.item[data-entry="${slug}"]`)?.classList.add("active");
+}
+
+function ensureEditableLine() {
   if (content.innerHTML.trim() === "") addEntryLine("Start writing...");
 }
 
@@ -689,108 +514,265 @@ function addEntryLine(text = "") {
   div.className = "entry-line";
   if (dragMode) div.classList.add("drag-enabled");
 
-  const handle = document.createElement("div");
-  handle.className = "drag-handle";
-  handle.innerHTML = "☰";
+  const drag = document.createElement("div");
+  drag.className = "drag-handle";
+  drag.textContent = "☰";
 
-  const checkbox = document.createElement("input");
-  checkbox.type = "checkbox";
-  checkbox.addEventListener("change", () => { saveToLocal(); debounceSync(); });
+  const cb = document.createElement("input");
+  cb.type = "checkbox";
+  cb.addEventListener("change", saveContent);
 
-  const textDiv = document.createElement("div");
-  textDiv.className = "line-text";
-  textDiv.contentEditable = !dragMode;
-  textDiv.innerHTML = text || "&nbsp;";
+  const txt = document.createElement("div");
+  txt.className = "line-text";
+  txt.contentEditable = !dragMode;
+  txt.innerHTML = text;
 
-  div.appendChild(handle);
-  div.appendChild(checkbox);
-  div.appendChild(textDiv);
+  div.appendChild(drag);
+  div.appendChild(cb);
+  div.appendChild(txt);
   content.appendChild(div);
 }
 
-// --- RECENTS ---
+function loadContent(mode, slug, label, url) {
+  currentMode = mode;
+  currentSlug = slug;
+  title.textContent = label;
+  dateLabel.textContent = (mode === "daily") ? formatPrettyDate(slug) : "";
+  highlightActive(slug);
+  if (!["today", "yesterday", "tomorrow"].includes(slug)) {
+    recentEntries = [slug, ...recentEntries.filter(s => s !== slug)].slice(0, 2);
+    localStorage.setItem("recent-entries", JSON.stringify(recentEntries));
+    renderRecents();
+  }
 
-function updateRecents(slug) {
-  recentEntries = JSON.parse(localStorage.getItem("recent-entries") || "[]");
-  recentEntries = recentEntries.filter(s => !["today", "yesterday", "tomorrow"].includes(s) && s !== slug);
-  recentEntries.unshift(slug);
-  recentEntries = recentEntries.slice(0, 2);
-  localStorage.setItem("recent-entries", JSON.stringify(recentEntries));
-  renderRecents();
+  const cached = localStorage.getItem(getKey(mode, slug));
+  const cachedHtml = cached ? decodeHTML(cached) : "";
+  const cachedVer = extractVersion(cachedHtml);
+
+  content.innerHTML = cachedHtml.replace(/<!--.*?-->/, "") || "";
+  ensureEditableLine();
+  updateStatus(cached ? "LOADED CACHED" : "EMPTY");
+
+  fetch(url)
+    .then(res => res.ok ? res.text() : null)
+    .then(remote => {
+      if (!remote) return;
+      const remoteVer = extractVersion(remote);
+      if (remoteVer > cachedVer) {
+        content.innerHTML = remote.replace(/<!--.*?-->/, "");
+        localStorage.setItem(getKey(mode, slug), encodeHTML(remote));
+        updateStatus("LOADED SYNCED");
+      }
+    })
+    .catch(() => updateStatus("OFFLINE"));
 }
 
 function renderRecents() {
-  const container = document.getElementById("recent-entries");
-  container.innerHTML = "";
+  const box = document.getElementById("recent-entries");
+  box.innerHTML = "";
   recentEntries.forEach(slug => {
     const div = document.createElement("div");
     div.className = "item";
     div.dataset.entry = slug;
-    div.innerHTML = `<span>${slug}</span>`;
+    div.textContent = slug;
     div.onclick = () => loadContent("daily", slug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${slug}.html`);
-    container.appendChild(div);
+    box.appendChild(div);
   });
-  highlightActive(currentSlug);
 }
 
-// --- DRAG MODE ---
+document.querySelector('[data-entry="today"]').onclick = () =>
+  loadContent("daily", new Date().toISOString().slice(0, 10), "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${new Date().toISOString().slice(0, 10)}.html`);
+document.querySelector('[data-entry="yesterday"]').onclick = () => {
+  const d = new Date(); d.setDate(d.getDate() - 1);
+  const slug = d.toISOString().slice(0, 10);
+  loadContent("daily", slug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${slug}.html`);
+};
+document.querySelector('[data-entry="tomorrow"]').onclick = () => {
+  const d = new Date(); d.setDate(d.getDate() + 1);
+  const slug = d.toISOString().slice(0, 10);
+  loadContent("daily", slug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${slug}.html`);
+};
 
 document.getElementById("dragToggleBtn").onclick = () => {
   dragMode = !dragMode;
   document.getElementById("dragToggleBtn").classList.toggle("active", dragMode);
   document.querySelectorAll(".entry-line").forEach(line => {
     line.classList.toggle("drag-enabled", dragMode);
-    line.querySelector(".line-text").contentEditable = !dragMode;
+    const txt = line.querySelector(".line-text");
+    if (txt) txt.contentEditable = !dragMode;
   });
 };
-
 new Sortable(content, {
   handle: ".drag-handle",
-  draggable: ".entry-line",
   animation: 150,
-  onEnd: () => {
-    saveToLocal();
-    debounceSync();
-  }
+  draggable: ".entry-line",
+  onEnd: () => saveContent()
 });
 
-// --- CALENDAR UI ---
+content.addEventListener("input", saveContent);
+content.addEventListener("change", saveContent);
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    addEntryLine("&nbsp;");
+    const last = content.querySelector(".entry-line:last-child .line-text");
+    if (last) {
+      const range = document.createRange();
+      range.selectNodeContents(last);
+      range.collapse(false);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      last.focus();
+    }
+    saveContent();
+  }
+});
+</script>
+<script>
+function toggleCollectionPopup() {
+  const popup = document.getElementById("collection-popup");
+  popup.style.display = popup.style.display === "none" ? "flex" : "none";
+}
+
+function renderCollectionItem(slug) {
+  const div = document.createElement("div");
+  div.className = "item";
+  div.innerHTML = `
+    <span onclick="loadCollection('${slug}')">${slug.toUpperCase()}</span>
+    <span class="item-controls">
+      <button class="icon-btn" onclick="showRenamePopup('${slug}')">✎</button>
+      <button class="icon-btn" onclick="showDeletePopup('${slug}')">🗑</button>
+    </span>`;
+  document.getElementById("collections-list").appendChild(div);
+}
+
+function saveCollections() {
+  localStorage.setItem("bujocache-collections-index", encodeHTML(JSON.stringify(collectionsList)));
+  debounceSyncCollectionList();
+}
+
+function loadCollectionsList() {
+  document.getElementById("collections-list").innerHTML = "";
+  const local = localStorage.getItem("bujocache-collections-index");
+  if (local) {
+    collectionsList = JSON.parse(decodeHTML(local));
+    collectionsList.forEach(renderCollectionItem);
+  }
+}
+
+function createCollection() {
+  const name = document.getElementById("new-collection-name").value.trim().toLowerCase();
+  if (!name || collectionsList.includes(name)) return;
+  collectionsList.push(name);
+  saveCollections();
+  toggleCollectionPopup();
+  loadCollectionsList();
+  loadCollection(name);
+}
+
+function showRenamePopup(slug) {
+  renameTargetSlug = slug;
+  document.getElementById("rename-input").value = slug.toUpperCase();
+  document.getElementById("rename-popup").style.display = "flex";
+}
+function hideRenamePopup() {
+  document.getElementById("rename-popup").style.display = "none";
+}
+function confirmRename() {
+  const newName = document.getElementById("rename-input").value.trim().toLowerCase();
+  if (!newName || newName === renameTargetSlug) return;
+  const i = collectionsList.indexOf(renameTargetSlug);
+  if (i !== -1) collectionsList[i] = newName;
+  saveCollections();
+  hideRenamePopup();
+  loadCollectionsList();
+  if (currentSlug === renameTargetSlug && currentMode === "collection")
+    loadCollection(newName);
+}
+
+function showDeletePopup(slug) {
+  deleteTargetSlug = slug;
+  document.getElementById("delete-popup").style.display = "flex";
+}
+function hideDeletePopup() {
+  document.getElementById("delete-popup").style.display = "none";
+}
+function confirmDelete() {
+  collectionsList = collectionsList.filter(s => s !== deleteTargetSlug);
+  saveCollections();
+  hideDeletePopup();
+  loadCollectionsList();
+  if (currentSlug === deleteTargetSlug && currentMode === "collection") {
+    loadContent("daily", new Date().toISOString().slice(0, 10), "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${new Date().toISOString().slice(0, 10)}.html`);
+  }
+}
+
+function loadCollection(slug) {
+  currentMode = "collection";
+  currentSlug = slug;
+  title.textContent = slug.toUpperCase();
+  dateLabel.textContent = "";
+  highlightActive(slug);
+
+  const cached = localStorage.getItem(getKey("collection", slug));
+  const cachedHtml = cached ? decodeHTML(cached) : "";
+  const cachedVer = extractVersion(cachedHtml);
+
+  content.innerHTML = cachedHtml.replace(/<!--.*?-->/, "") || "";
+  ensureEditableLine();
+
+  fetch(`https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/collections/collection-${slug}.html`)
+    .then(res => res.ok ? res.text() : null)
+    .then(remote => {
+      if (!remote) return;
+      const remoteVer = extractVersion(remote);
+      if (remoteVer > cachedVer) {
+        content.innerHTML = remote.replace(/<!--.*?-->/, "");
+        localStorage.setItem(getKey("collection", slug), encodeHTML(remote));
+        updateStatus("LOADED SYNCED");
+      }
+    })
+    .catch(() => updateStatus("OFFLINE"));
+}
+
+// CALENDAR LOGIC
 
 function buildCalendarGrid(date) {
-  calendarGrid.innerHTML = "";
+  const grid = document.getElementById("calendar-grid");
+  grid.innerHTML = "";
   const year = date.getFullYear();
   const month = date.getMonth();
   const days = new Date(year, month + 1, 0).getDate();
-  calendarMonthLabel.innerText = date.toLocaleString("default", { month: "long", year: "numeric" }).toUpperCase();
+  document.getElementById("calendar-month").textContent = date.toLocaleString("default", { month: "long", year: "numeric" }).toUpperCase();
+
   for (let i = 1; i <= days; i++) {
     const d = new Date(year, month, i);
     const slug = d.toISOString().slice(0, 10);
     const el = document.createElement("div");
     el.className = "calendar-day";
-    el.innerText = i;
-    if (slug === new Date().toISOString().slice(0, 10)) el.classList.add("calendar-today");
+    el.textContent = i;
+    el.style.textAlign = "center";
+    el.style.border = "1px solid #444";
+    el.style.padding = "4px";
+    el.style.cursor = "pointer";
+    if (slug === new Date().toISOString().slice(0, 10)) el.style.fontWeight = "bold";
     el.onclick = () => {
       selectedCalendarSlug = slug;
-      [...calendarGrid.children].forEach(c => c.classList.remove("calendar-selected"));
-      el.classList.add("calendar-selected");
+      Array.from(grid.children).forEach(c => c.style.background = "");
+      el.style.background = "#333";
     };
-    calendarGrid.appendChild(el);
+    grid.appendChild(el);
   }
 }
 
 document.getElementById("calendar-btn").onclick = () => {
-  calendarPopup.style.display = "block";
+  calendarDate = new Date();
   selectedCalendarSlug = null;
+  calendarPopup.style.display = "flex";
   buildCalendarGrid(calendarDate);
 };
-
-document.getElementById("calendar-create").onclick = () => {
-  if (selectedCalendarSlug) {
-    calendarPopup.style.display = "none";
-    loadContent("daily", selectedCalendarSlug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${selectedCalendarSlug}.html`);
-  }
-};
-
 document.getElementById("prev-month").onclick = () => {
   calendarDate.setMonth(calendarDate.getMonth() - 1);
   buildCalendarGrid(calendarDate);
@@ -799,28 +781,41 @@ document.getElementById("next-month").onclick = () => {
   calendarDate.setMonth(calendarDate.getMonth() + 1);
   buildCalendarGrid(calendarDate);
 };
+document.getElementById("calendar-create").onclick = () => {
+  if (selectedCalendarSlug) {
+    calendarPopup.style.display = "none";
+    loadContent("daily", selectedCalendarSlug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${selectedCalendarSlug}.html`);
+  }
+};
 
-// --- INIT ---
+// SYNC COLLECTION LIST TO GITHUB
+function debounceSyncCollectionList() {
+  clearTimeout(window._collSyncTimeout);
+  window._collSyncTimeout = setTimeout(() => {
+    fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        date: "collections-index",
+        mode: "collections-index",
+        content: encodeHTML(JSON.stringify(collectionsList))
+      })
+    });
+  }, 800);
+}
 
-(function initRelativeEntries() {
-  const today = new Date();
-  const iso = d => d.toISOString().slice(0, 10);
-  const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
-  const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
-  document.getElementById("yesterday-entry").setAttribute("data-entry", iso(yesterday));
-  document.getElementById("today-entry").setAttribute("data-entry", iso(today));
-  document.getElementById("tomorrow-entry").setAttribute("data-entry", iso(tomorrow));
-
-  document.getElementById("yesterday-entry").onclick = () =>
-    loadContent("daily", iso(yesterday), "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${iso(yesterday)}.html`);
-  document.getElementById("today-entry").onclick = () =>
-    loadContent("daily", iso(today), "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${iso(today)}.html`);
-  document.getElementById("tomorrow-entry").onclick = () =>
-    loadContent("daily", iso(tomorrow), "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${iso(tomorrow)}.html`);
-})();
-
-renderRecents();
-loadContent("daily", currentSlug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${currentSlug}.html`);
+// INIT
+window.onload = () => {
+  try {
+    const rec = localStorage.getItem("recent-entries");
+    recentEntries = rec ? JSON.parse(rec) : [];
+    renderRecents();
+    loadCollectionsList();
+    loadContent("daily", currentSlug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${currentSlug}.html`);
+  } catch (e) {
+    console.error(e);
+  }
+};
 </script>
 </body>
 </html>

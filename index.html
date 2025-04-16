@@ -360,7 +360,6 @@
         <div class="item" data-entry="yesterday">YESTERDAY</div>
         <div class="item" data-entry="today">TODAY</div>
         <div class="item" data-entry="tomorrow">TOMORROW</div>
-
         <h2 style="margin-top: 18px;">RECENTS <span id="recents-toggle" style="float: right; cursor: pointer;">▼</span></h2>
         <div id="recent-entries" style="display: block;"></div>
       </div>
@@ -429,7 +428,9 @@
       <button onclick="calendarPopup.style.display='none'">CANCEL</button>
     </div>
   </div>
+
 <script>
+// === CORE VARIABLES ===
 const content = document.getElementById("journal-content");
 const dateLabel = document.getElementById("entry-date");
 const title = document.getElementById("entry-title");
@@ -438,24 +439,22 @@ let currentMode = "daily";
 let currentSlug = new Date().toISOString().slice(0, 10);
 let collectionsList = [];
 let recentEntries = [];
-let selectedCalendarSlug = null;
-let renameTargetSlug = "";
-let deleteTargetSlug = "";
 let dragMode = false;
-let calendarDate = new Date();
 
+// === UTILS ===
 function getKey(mode, slug) {
   return `bujocache-${mode}-${slug}`;
 }
-
 function encodeHTML(str) {
   return btoa(unescape(encodeURIComponent(str)));
 }
-
 function decodeHTML(str) {
   return decodeURIComponent(escape(atob(str)));
 }
-
+function extractVersion(html) {
+  const match = html.match(/<!-- version:(.*?)-->/);
+  return match ? new Date(match[1]) : new Date(0);
+}
 function updateStatus(text, isSyncing = false) {
   const label = document.querySelector("#sync-status .label");
   const spinner = document.querySelector("#sync-status .spinner");
@@ -463,16 +462,16 @@ function updateStatus(text, isSyncing = false) {
   spinner.style.display = isSyncing ? "inline-block" : "none";
 }
 
-function extractVersion(html) {
-  const match = html.match(/<!-- version:(.*?)-->/);
-  return match ? new Date(match[1]) : new Date(0);
+// === SYNC + SAVE ===
+function forceCheckboxAttrs() {
+  content.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.checked ? cb.setAttribute("checked", "checked") : cb.removeAttribute("checked");
+  });
 }
-
 function saveLocal() {
   const html = `<!-- version:${new Date().toISOString()} -->\n${content.innerHTML}`;
   localStorage.setItem(getKey(currentMode, currentSlug), encodeHTML(html));
 }
-
 function syncRemote() {
   const html = `<!-- version:${new Date().toISOString()} -->\n${content.innerHTML}`;
   updateStatus("SYNCING...", true);
@@ -488,23 +487,22 @@ function syncRemote() {
     updateStatus(res.ok ? "SYNCED" : "NETLIFY ERROR");
   }).catch(() => updateStatus("SYNC FAILED"));
 }
-
 function debounceSync() {
   clearTimeout(window._syncTimeout);
   window._syncTimeout = setTimeout(syncRemote, 1200);
 }
-
-function forceCheckboxAttrs() {
-  content.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-    cb.checked ? cb.setAttribute("checked", "checked") : cb.removeAttribute("checked");
-  });
-}
-
 function saveContent() {
   forceCheckboxAttrs();
   saveLocal();
   debounceSync();
 }
+
+// === CONTINUE IN PART 3: loading content, collections, recents, drag toggle ===
+</script>
+</body>
+</html>
+<script>
+// === CONTINUED ===
 
 function formatPrettyDate(dateStr) {
   const d = new Date(dateStr);
@@ -602,6 +600,60 @@ function renderRecents() {
     });
 }
 
+function toggleCollectionPopup() {
+  const popup = document.getElementById("collection-popup");
+  popup.style.display = popup.style.display === "none" ? "flex" : "none";
+}
+
+function createCollection() {
+  const input = document.getElementById("new-collection-name");
+  const name = input.value.trim().toUpperCase().replace(/\s+/g, "-");
+  if (!name) return;
+  const html = `<!-- version:${new Date().toISOString()} -->\n<div class="entry-line"><div class="drag-handle">☰</div><input type="checkbox"><div class="line-text">New collection: ${name}</div></div>`;
+  const encoded = btoa(unescape(encodeURIComponent(html)));
+  fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      date: name,
+      content: encoded,
+      mode: "collection"
+    })
+  }).then(() => {
+    toggleCollectionPopup();
+    input.value = "";
+    loadCollectionsList();
+  });
+}
+
+function loadCollectionsList() {
+  fetch('https://api.github.com/repos/lebron1212/bulletjournal/contents/collections')
+    .then(response => response.json())
+    .then(data => {
+      const collections = data
+        .filter(item => item.name.endsWith('.html'))
+        .map(item => {
+          const slug = item.name.replace('.html', '');
+          return { name: slug, slug };
+        });
+      renderCollections(collections);
+    });
+}
+
+function renderCollections(list) {
+  const box = document.getElementById("collections-list");
+  box.innerHTML = "";
+  list.forEach(c => {
+    const div = document.createElement("div");
+    div.className = "item";
+    div.dataset.entry = c.slug;
+    div.textContent = c.name;
+    div.onclick = () => loadContent("collection", c.slug, c.name, `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/collections/${c.slug}.html`);
+    box.appendChild(div);
+  });
+}
+
+// === ENTRY BEHAVIOR ===
 document.getElementById("recents-toggle").onclick = () => {
   const box = document.getElementById("recent-entries");
   const isOpen = box.style.display !== "none";
@@ -624,6 +676,7 @@ document.querySelector('[data-entry="tomorrow"]').onclick = () => {
   loadContent("daily", slug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${slug}.html`);
 };
 
+// === DRAG MODE ===
 document.getElementById("dragToggleBtn").onclick = () => {
   dragMode = !dragMode;
   document.getElementById("dragToggleBtn").classList.toggle("active", dragMode);
@@ -668,7 +721,7 @@ window.onload = () => {
     const rec = localStorage.getItem("recent-entries");
     recentEntries = rec ? JSON.parse(rec) : [];
     renderRecents();
-    loadCollectionsList(); // pulls from cache or sync
+    loadCollectionsList();
     const slug = new Date().toISOString().slice(0, 10);
     loadContent("daily", slug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${slug}.html`);
   } catch (e) {
@@ -676,4 +729,3 @@ window.onload = () => {
   }
 };
 </script>
-</html>

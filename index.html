@@ -771,6 +771,82 @@ document.addEventListener("keydown", e => {
   }
 });
 
+  function highlightActive(slug) {
+  document.querySelectorAll(".item").forEach(i => {
+    i.classList.remove("active");
+    if (i.dataset.entry === slug) {
+      i.classList.add("active");
+    }
+  });
+}
+
+function loadCollectionsList() {
+  fetch("https://api.github.com/repos/lebron1212/bulletjournal/contents/collections")
+    .then(res => res.json())
+    .then(data => {
+      const box = document.getElementById("collections-list");
+      box.innerHTML = "";
+      data.filter(i => i.name.endsWith(".html")).forEach(item => {
+        const rawName = item.name.replace(".html", "");
+        const slug = rawName.replace(/^collection-/, "");
+        const div = document.createElement("div");
+        div.className = "item";
+        div.dataset.entry = slug;
+        div.textContent = slug;
+
+        const ctrl = document.createElement("div");
+        ctrl.className = "item-controls";
+
+        const rename = document.createElement("button");
+        rename.className = "icon-btn";
+        rename.innerText = "✎";
+        rename.onclick = e => {
+          e.stopPropagation();
+          window._renameTarget = slug;
+          document.getElementById("rename-input").value = slug;
+          document.getElementById("rename-popup").style.display = "flex";
+        };
+
+        const del = document.createElement("button");
+        del.className = "icon-btn";
+        del.innerText = "✕";
+        del.onclick = e => {
+          e.stopPropagation();
+          window._deleteTarget = slug;
+          document.getElementById("delete-popup").style.display = "flex";
+        };
+
+        ctrl.appendChild(rename);
+        ctrl.appendChild(del);
+        div.appendChild(ctrl);
+
+        div.onclick = () => {
+          loadContent("collection", slug, slug, `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/collections/collection-${slug}.html`);
+        };
+
+        box.appendChild(div);
+      });
+    });
+}
+
+document.getElementById("dragToggleBtn").onclick = () => {
+  dragMode = !dragMode;
+  const btn = document.getElementById("dragToggleBtn");
+  btn.classList.toggle("active", dragMode);
+
+  const entryLines = document.querySelectorAll(".entry-line");
+  entryLines.forEach(line => {
+    line.classList.toggle("drag-enabled", dragMode);
+    const txt = line.querySelector(".line-text");
+    if (txt) txt.contentEditable = !dragMode;
+    const dragIcon = line.querySelector(".drag-handle");
+    if (dragIcon) {
+      dragIcon.style.display = dragMode ? "inline-block" : "none";
+    }
+  });
+};
+
+
 window.onload = () => {
   const rec = localStorage.getItem("recent-entries");
   recentEntries = rec ? JSON.parse(rec) : [];

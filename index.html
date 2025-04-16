@@ -71,17 +71,6 @@
       font-weight: 700;
     }
 
-    #calendar-btn {
-      position: absolute;
-      top: 10px;
-      right: 12px;
-      font-size: 1.2rem;
-      background: none;
-      border: none;
-      color: #eee;
-      cursor: pointer;
-    }
-
     .item {
       font-size: 0.75rem;
       letter-spacing: 0.03em;
@@ -189,37 +178,15 @@
       background: #222;
     }
 
-    /* Calendar Enhancements */
-    #calendar-popup {
-      max-height: 90vh;
-      overflow: auto;
-      overflow-x: hidden;
-    }
-
-    #calendar-grid > div {
-      position: relative;
-    }
-
-    .calendar-today {
-      border: 2px solid #0af !important;
-      border-radius: 6px;
-    }
-
-    .calendar-entry-dot::after {
-      content: '';
-      display: block;
-      width: 4px;
-      height: 4px;
-      background: #0af;
-      border-radius: 50%;
+    #calendar-btn {
       position: absolute;
-      bottom: 4px;
-      left: 50%;
-      transform: translateX(-50%);
-    }
-
-    .calendar-selected {
-      background: #333;
+      top: 10px;
+      right: 12px;
+      font-size: 1.2rem;
+      background: none;
+      border: none;
+      color: #eee;
+      cursor: pointer;
     }
 
     @media (prefers-color-scheme: light) {
@@ -227,7 +194,7 @@
         background: transparent;
         color: #000;
       }
-      .card, .panel, .notes, .popup-buttons button {
+      .card, .panel, .popup-buttons button {
         border-color: #ccc;
         color: #000;
       }
@@ -245,18 +212,13 @@
         border-color: #aaa;
         background: none;
       }
-      .drag-toggle-btn, #calendar-btn { color: #000; }
-      .calendar-today {
-        border: 2px solid #00f !important;
-      }
-      .calendar-entry-dot::after {
-        background: #00f;
-      }
+      #calendar-btn { color: #000; }
     }
   </style>
 </head>
 <body>
   <div id="wrapper">
+    <!-- Sidebar and journal panel go here -->
     <div class="panel">
       <div class="card" id="index-card">
         <h2>INDEX</h2>
@@ -272,6 +234,8 @@
       <div id="collections-card" class="card">
         <h2>COLLECTIONS</h2>
         <span class="add-collection-link" onclick="toggleCollectionPopup()">+ ADD</span>
+
+        <!-- Popup to create a collection -->
         <div id="collection-popup" class="popup" style="display:none;">
           <h3>NEW COLLECTION</h3>
           <input id="new-collection-name" placeholder="Collection name" />
@@ -280,11 +244,13 @@
             <button onclick="toggleCollectionPopup()">CANCEL</button>
           </div>
         </div>
+
+        <!-- Live collection list -->
         <div id="collections-list"></div>
       </div>
     </div>
 
-    <div id="journal-panel">
+    <div id="journal-panel" class="card" style="flex: 1; display: flex; flex-direction: column;">
       <div class="header">
         <div style="display: flex; flex-direction: column;">
           <div id="entry-title">DAILY LOG</div>
@@ -295,6 +261,7 @@
       <div id="journal-content" class="notes" contenteditable="true"></div>
     </div>
   </div>
+
   <!-- Calendar Popup -->
   <div id="calendar-popup" class="popup" style="display:none;">
     <h3>DATE INPUT</h3>
@@ -331,435 +298,447 @@
     </div>
   </div>
 
-  <!-- Sync status footer -->
-  <div id="sync-status">
-    <span class="spinner" style="display:none;"></span>
+  <!-- Sync Status -->
+  <div id="sync-status" style="position: fixed; bottom: 10px; left: 20px; font-size: 0.65rem; opacity: 0.8;">
+    <span class="spinner" style="display:none;">⏳</span>
     <span class="label">SYNCED</span>
   </div>
+<script>
+const content = document.getElementById("journal-content");
+const title = document.getElementById("entry-title");
+const dateLabel = document.getElementById("entry-date");
+const calendarPopup = document.getElementById("calendar-popup");
+const calendarGrid = document.getElementById("calendar-grid");
+const calendarMonthLabel = document.getElementById("calendar-month");
+const calendarCreateBtn = document.getElementById("calendar-create");
 
-  <script>
-  const content = document.getElementById("journal-content");
-  const title = document.getElementById("entry-title");
-  const dateLabel = document.getElementById("entry-date");
-  const calendarPopup = document.getElementById("calendar-popup");
-  const calendarGrid = document.getElementById("calendar-grid");
-  const calendarMonthLabel = document.getElementById("calendar-month");
-  const calendarCreateBtn = document.getElementById("calendar-create");
+let currentMode = "daily";
+let currentSlug = new Date().toISOString().slice(0, 10);
+let recentEntries = [];
+let dragMode = false;
+let undoStack = [], redoStack = [];
+let selectedCalendarDate = null;
+let calendarDate = new Date();
 
-  let currentMode = "daily";
-  let currentSlug = new Date().toISOString().slice(0, 10);
-  let recentEntries = [];
-  let dragMode = false;
-  let selectedCalendarDate = null;
-  let calendarDate = new Date();
+// Utility
+function getTodaySlug(offset = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return d.toISOString().slice(0, 10);
+}
 
-  function getKey(mode, slug) {
-    return `bujocache-${mode}-${slug}`;
-  }
+function encodeHTML(str) {
+  return btoa(unescape(encodeURIComponent(str)));
+}
 
-  function encodeHTML(str) {
-    return btoa(unescape(encodeURIComponent(str)));
-  }
+function decodeHTML(str) {
+  return decodeURIComponent(escape(atob(str)));
+}
 
-  function decodeHTML(str) {
-    return decodeURIComponent(escape(atob(str)));
-  }
+function extractVersion(html) {
+  const match = html.match(/<!-- version:(.*?)-->/);
+  return match ? new Date(match[1]) : new Date(0);
+}
 
-  function extractVersion(html) {
-    const match = html.match(/<!-- version:(.*?)-->/);
-    return match ? new Date(match[1]) : new Date(0);
-  }
+function updateStatus(text, syncing = false) {
+  document.querySelector("#sync-status .label").textContent = text;
+  document.querySelector("#sync-status .spinner").style.display = syncing ? "inline-block" : "none";
+}
 
-  function updateStatus(text, syncing = false) {
-    document.querySelector("#sync-status .label").textContent = text;
-    document.querySelector("#sync-status .spinner").style.display = syncing ? "inline-block" : "none";
-  }
+function formatPrettyDate(dateStr) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }).toUpperCase();
+}
 
-  function forceCheckboxAttrs() {
-    content.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-      cb.checked ? cb.setAttribute("checked", "checked") : cb.removeAttribute("checked");
-    });
-  }
-
-  function saveLocal() {
-    const html = `<!-- version:${new Date().toISOString()} -->\n${content.innerHTML}`;
-    localStorage.setItem(getKey(currentMode, currentSlug), encodeHTML(html));
-  }
-
-  function syncRemote() {
-    const html = `<!-- version:${new Date().toISOString()} -->\n${content.innerHTML}`;
-    updateStatus("SYNCING...", true);
-    fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ date: currentSlug, content: encodeHTML(html), mode: currentMode })
-    }).then(res => updateStatus(res.ok ? "SYNCED" : "NETLIFY ERROR"))
-      .catch(() => updateStatus("SYNC FAILED"));
-  }
-
-  function debounceSync() {
-    clearTimeout(window._syncTimeout);
-    window._syncTimeout = setTimeout(syncRemote, 1000);
-  }
-
-  function saveContent() {
-    forceCheckboxAttrs();
-    saveLocal();
-    debounceSync();
-  }
-
-  function formatPrettyDate(dateStr) {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }).toUpperCase();
-  }
-
-  function ensureEditableLine() {
-    if (content.innerHTML.trim() === "") addEntryLine("Start writing...");
-  }
-
-  function addEntryLine(text = "") {
-    const div = document.createElement("div");
-    div.className = "entry-line";
-    if (dragMode) div.classList.add("drag-enabled");
-
-    const drag = document.createElement("div");
-    drag.className = "drag-handle";
-    drag.textContent = "☰";
-
-    const cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.onchange = saveContent;
-
-    const txt = document.createElement("div");
-    txt.className = "line-text";
-    txt.contentEditable = !dragMode;
-    txt.innerHTML = text;
-
-    div.appendChild(drag);
-    div.appendChild(cb);
-    div.appendChild(txt);
-    content.appendChild(div);
-  }
-  function highlightActive(slug) {
-    document.querySelectorAll(".item").forEach(i => {
-      const isMatch = i.dataset.entry === slug;
-      i.classList.toggle("active", isMatch);
-    });
-  }
-
-  function loadContent(mode, slug, label, url) {
-    currentMode = mode;
-    currentSlug = slug;
-    title.textContent = label;
-    dateLabel.textContent = (mode === "daily") ? formatPrettyDate(slug) : "";
-    highlightActive(slug);
-
-    const today = getTodaySlug();
-    const yest = getTodaySlug(-1);
-    const tomo = getTodaySlug(1);
-
-    if (![today, yest, tomo].includes(slug)) {
-      recentEntries = [slug, ...recentEntries.filter(s => s !== slug && ![today, yest, tomo].includes(s))].slice(0, 2);
-      localStorage.setItem("recent-entries", JSON.stringify(recentEntries));
-      renderRecents();
-    }
-
-    const cached = localStorage.getItem(getKey(mode, slug));
-    const cachedHtml = cached ? decodeHTML(cached) : "";
-    const cachedVer = extractVersion(cachedHtml);
-    content.innerHTML = cachedHtml.replace(/<!--.*?-->/, "") || "";
-    ensureEditableLine();
-    updateStatus(cached ? "LOADED CACHED" : "EMPTY");
-
-    fetch(url).then(res => res.ok ? res.text() : null).then(remote => {
-      if (!remote) return;
-      const remoteVer = extractVersion(remote);
-      if (remoteVer > cachedVer) {
-        content.innerHTML = remote.replace(/<!--.*?-->/, "");
-        localStorage.setItem(getKey(mode, slug), encodeHTML(remote));
-        updateStatus("LOADED SYNCED");
-      }
-    }).catch(() => updateStatus("OFFLINE"));
-  }
-
-  function renderRecents() {
-    const box = document.getElementById("recent-entries");
-    box.innerHTML = "";
-    const today = getTodaySlug();
-    const yest = getTodaySlug(-1);
-    const tomo = getTodaySlug(1);
-    recentEntries.filter(slug => ![today, yest, tomo].includes(slug)).forEach(slug => {
-      const div = document.createElement("div");
-      div.className = "item";
-      div.dataset.entry = slug;
-      div.textContent = slug;
-      div.onclick = () => loadContent("daily", slug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${slug}.html`);
-      box.appendChild(div);
-    });
-  }
-
-  function getExistingJournalSlugs() {
-    const slugs = [];
-    for (let k in localStorage) {
-      if (k.startsWith("bujocache-daily-")) {
-        slugs.push(k.replace("bujocache-daily-", ""));
-      }
-    }
-    return slugs;
-  }
-
-  function renderCalendar() {
-    const year = calendarDate.getFullYear();
-    const month = calendarDate.getMonth();
-    const todaySlug = getTodaySlug();
-    const existingSlugs = getExistingJournalSlugs();
-
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    calendarMonthLabel.textContent = new Date(year, month).toLocaleString("default", { month: "long", year: "numeric" }).toUpperCase();
-    calendarGrid.innerHTML = "";
-
-    const firstDay = new Date(year, month, 1).getDay();
-    for (let i = 0; i < firstDay; i++) {
-      calendarGrid.appendChild(document.createElement("div"));
-    }
-
-    for (let d = 1; d <= daysInMonth; d++) {
-      const cell = document.createElement("div");
-      cell.textContent = d;
-      cell.style.textAlign = "center";
-      cell.style.padding = "6px";
-      cell.style.border = "1px solid #444";
-      cell.style.cursor = "pointer";
-      const slug = new Date(year, month, d).toISOString().slice(0, 10);
-
-      if (slug === todaySlug) cell.classList.add("calendar-today");
-      if (existingSlugs.includes(slug)) cell.classList.add("calendar-entry-dot");
-
-      cell.onclick = () => {
-        selectedCalendarDate = slug;
-        calendarCreateBtn.disabled = false;
-        document.querySelectorAll("#calendar-grid div").forEach(c => c.classList.remove("calendar-selected"));
-        cell.classList.add("calendar-selected");
-      };
-      calendarGrid.appendChild(cell);
-    }
-  }
-
-  document.getElementById("calendar-btn").onclick = () => {
-    calendarPopup.style.display = "flex";
-    renderCalendar();
-  };
-  document.getElementById("prev-month").onclick = () => {
-    calendarDate.setMonth(calendarDate.getMonth() - 1);
-    renderCalendar();
-  };
-  document.getElementById("next-month").onclick = () => {
-    calendarDate.setMonth(calendarDate.getMonth() + 1);
-    renderCalendar();
-  };
-  calendarCreateBtn.onclick = () => {
-    if (!selectedCalendarDate) return;
-    const slug = selectedCalendarDate;
-    calendarPopup.style.display = "none";
-    loadContent("daily", slug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${slug}.html`);
-  };
-  // === Undo / Redo
-  let undoStack = [], redoStack = [];
-
-  function captureSnapshot() {
-    const snapshot = content.innerHTML;
-    undoStack.push(snapshot);
-    redoStack = []; // clear redo history
-  }
-
-  function applySnapshot(snapshot) {
-    if (!snapshot) return;
-    content.innerHTML = snapshot;
-    forceCheckboxAttrs();
-    saveContent();
-  }
-
-  document.addEventListener("keydown", e => {
-    if (e.metaKey || e.ctrlKey) {
-      if (e.key === "z" && !e.shiftKey) {
-        e.preventDefault();
-        const snap = undoStack.pop();
-        if (snap) {
-          redoStack.push(content.innerHTML);
-          applySnapshot(snap);
-        }
-      } else if ((e.key === "Z" && e.shiftKey) || e.key === "y") {
-        e.preventDefault();
-        const snap = redoStack.pop();
-        if (snap) {
-          undoStack.push(content.innerHTML);
-          applySnapshot(snap);
-        }
-      }
-    }
+function forceCheckboxAttrs() {
+  content.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.checked ? cb.setAttribute("checked", "checked") : cb.removeAttribute("checked");
   });
+}
 
-  content.addEventListener("input", () => {
-    captureSnapshot();
-    saveContent();
+function ensureEditableLine() {
+  if (content.innerHTML.trim() === "") addEntryLine("Start writing...");
+}
+
+function addEntryLine(text = "") {
+  const div = document.createElement("div");
+  div.className = "entry-line";
+  if (dragMode) div.classList.add("drag-enabled");
+
+  const drag = document.createElement("div");
+  drag.className = "drag-handle";
+  drag.textContent = "☰";
+
+  const cb = document.createElement("input");
+  cb.type = "checkbox";
+  cb.onchange = saveContent;
+
+  const txt = document.createElement("div");
+  txt.className = "line-text";
+  txt.contentEditable = !dragMode;
+  txt.innerHTML = text;
+
+  div.appendChild(drag);
+  div.appendChild(cb);
+  div.appendChild(txt);
+  content.appendChild(div);
+}
+
+// === Save Logic ===
+function saveLocal() {
+  const html = `<!-- version:${new Date().toISOString()} -->\n${content.innerHTML}`;
+  localStorage.setItem(`bujocache-${currentMode}-${currentSlug}`, encodeHTML(html));
+}
+
+function syncRemote() {
+  const html = `<!-- version:${new Date().toISOString()} -->\n${content.innerHTML}`;
+  updateStatus("SYNCING...", true);
+  fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ date: currentSlug, content: encodeHTML(html), mode: currentMode })
+  }).then(res => updateStatus(res.ok ? "SYNCED" : "NETLIFY ERROR"))
+    .catch(() => updateStatus("SYNC FAILED"));
+}
+
+function debounceSync() {
+  clearTimeout(window._syncTimeout);
+  window._syncTimeout = setTimeout(syncRemote, 1000);
+}
+
+function saveContent() {
+  forceCheckboxAttrs();
+  saveLocal();
+  debounceSync();
+}
+
+// === Highlight Active
+function highlightActive(slug) {
+  document.querySelectorAll(".item").forEach(i => {
+    const isMatch = i.dataset.entry === slug;
+    i.classList.toggle("active", isMatch);
   });
+}
+// === Content Loading ===
+function loadContent(mode, slug, label, url) {
+  currentMode = mode;
+  currentSlug = slug;
+  title.textContent = label;
+  dateLabel.textContent = (mode === "daily") ? formatPrettyDate(slug) : "";
+  highlightActive(slug);
 
-  // === Drag & Sort
-  document.getElementById("dragToggleBtn").onclick = () => {
-    dragMode = !dragMode;
-    document.getElementById("dragToggleBtn").classList.toggle("active", dragMode);
-    document.querySelectorAll(".entry-line").forEach(line => {
-      line.classList.toggle("drag-enabled", dragMode);
-      const txt = line.querySelector(".line-text");
-      if (txt) txt.contentEditable = !dragMode;
-      const dragIcon = line.querySelector(".drag-handle");
-      if (dragIcon) dragIcon.style.display = dragMode ? "inline-block" : "none";
-    });
-  };
+  const today = getTodaySlug();
+  const yest = getTodaySlug(-1);
+  const tomo = getTodaySlug(1);
 
-  new Sortable(content, {
-    handle: ".drag-handle",
-    animation: 150,
-    draggable: ".entry-line",
-    ghostClass: "sortable-ghost",
-    onEnd: () => saveContent()
-  });
-
-  // === Collection Popups
-  function toggleCollectionPopup() {
-    const popup = document.getElementById("collection-popup");
-    popup.style.display = popup.style.display === "none" ? "flex" : "none";
-  }
-
-  function createCollection() {
-    const input = document.getElementById("new-collection-name");
-    const name = input.value.trim().toUpperCase().replace(/\s+/g, "-");
-    if (!name) return;
-    const html = `<!-- version:${new Date().toISOString()} -->\n<div class="entry-line"><div class="drag-handle">☰</div><input type="checkbox"><div class="line-text">New collection: ${name}</div></div>`;
-    fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ date: name, content: encodeHTML(html), mode: "collection" })
-    }).then(() => {
-      toggleCollectionPopup();
-      input.value = "";
-      if (!cachedCollectionSlugs.includes(name)) {
-        cachedCollectionSlugs.unshift(name);
-        localStorage.setItem("collections-list", JSON.stringify(cachedCollectionSlugs));
-        renderCollections(cachedCollectionSlugs);
-      }
-    });
-  }
-
-  function confirmRename() {
-    const newName = document.getElementById("rename-input").value.trim().toUpperCase().replace(/\s+/g, "-");
-    if (!newName || !window._renameTarget) return;
-    fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ rename: window._renameTarget, to: newName, mode: "collection" })
-    }).then(() => {
-      hideRenamePopup();
-      loadCollectionsList();
-    });
-  }
-
-  function confirmDelete() {
-    if (!window._deleteTarget) return;
-    fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ delete: window._deleteTarget, mode: "collection" })
-    }).then(() => {
-      hideDeletePopup();
-      loadCollectionsList();
-    });
-  }
-
-  function hideRenamePopup() {
-    document.getElementById("rename-popup").style.display = "none";
-  }
-
-  function hideDeletePopup() {
-    document.getElementById("delete-popup").style.display = "none";
-  }
-
-  let cachedCollectionSlugs = [];
-
-  function loadCollectionsList() {
-    const box = document.getElementById("collections-list");
-    box.innerHTML = "";
-
-    const stored = localStorage.getItem("collections-list");
-    if (stored) {
-      cachedCollectionSlugs = JSON.parse(stored);
-      renderCollections(cachedCollectionSlugs);
-    }
-
-    fetch("https://api.github.com/repos/lebron1212/bulletjournal/contents/journals/collections")
-      .then(res => res.ok ? res.json() : [])
-      .then(data => {
-        const slugs = data
-          .filter(i => i.name.startsWith("collection-") && i.name.endsWith(".html"))
-          .map(i => i.name.replace(".html", "").replace("collection-", ""));
-        cachedCollectionSlugs = slugs;
-        localStorage.setItem("collections-list", JSON.stringify(slugs));
-        renderCollections(slugs);
-      });
-  }
-
-  function renderCollections(slugs) {
-    const box = document.getElementById("collections-list");
-    box.innerHTML = "";
-    slugs.forEach(slug => {
-      const div = document.createElement("div");
-      div.className = "item";
-      div.dataset.entry = slug;
-      div.textContent = slug;
-
-      const ctrl = document.createElement("div");
-      ctrl.className = "item-controls";
-
-      const rename = document.createElement("button");
-      rename.className = "icon-btn";
-      rename.innerText = "✎";
-      rename.onclick = e => {
-        e.stopPropagation();
-        window._renameTarget = slug;
-        document.getElementById("rename-input").value = slug;
-        document.getElementById("rename-popup").style.display = "flex";
-      };
-
-      const del = document.createElement("button");
-      del.className = "icon-btn";
-      del.innerText = "✕";
-      del.onclick = e => {
-        e.stopPropagation();
-        window._deleteTarget = slug;
-        document.getElementById("delete-popup").style.display = "flex";
-      };
-
-      ctrl.appendChild(rename);
-      ctrl.appendChild(del);
-      div.appendChild(ctrl);
-
-      div.onclick = () => {
-        loadContent("collection", slug, slug, `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/collections/collection-${slug}.html`);
-      };
-
-      box.appendChild(div);
-    });
-  }
-
-  // === Final Init
-  window.onload = () => {
-    const rec = localStorage.getItem("recent-entries");
-    recentEntries = rec ? JSON.parse(rec) : [];
+  if (![today, yest, tomo].includes(slug)) {
+    recentEntries = [slug, ...recentEntries.filter(s => s !== slug && ![today, yest, tomo].includes(s))].slice(0, 2);
+    localStorage.setItem("recent-entries", JSON.stringify(recentEntries));
     renderRecents();
-    loadCollectionsList();
-    const slug = getTodaySlug();
+  }
+
+  const cached = localStorage.getItem(`bujocache-${mode}-${slug}`);
+  const cachedHtml = cached ? decodeHTML(cached) : "";
+  const cachedVer = extractVersion(cachedHtml);
+  content.innerHTML = cachedHtml.replace(/<!--.*?-->/, "") || "";
+  ensureEditableLine();
+  updateStatus(cached ? "LOADED CACHED" : "EMPTY");
+
+  fetch(url).then(res => res.ok ? res.text() : null).then(remote => {
+    if (!remote) return;
+    const remoteVer = extractVersion(remote);
+    if (remoteVer > cachedVer) {
+      content.innerHTML = remote.replace(/<!--.*?-->/, "");
+      localStorage.setItem(`bujocache-${mode}-${slug}`, encodeHTML(remote));
+      updateStatus("LOADED SYNCED");
+    }
+  }).catch(() => updateStatus("OFFLINE"));
+}
+
+function renderRecents() {
+  const box = document.getElementById("recent-entries");
+  box.innerHTML = "";
+  const today = getTodaySlug();
+  const yest = getTodaySlug(-1);
+  const tomo = getTodaySlug(1);
+  recentEntries.filter(slug => ![today, yest, tomo].includes(slug)).forEach(slug => {
+    const div = document.createElement("div");
+    div.className = "item";
+    div.dataset.entry = slug;
+    div.textContent = slug;
+    div.onclick = () => loadContent("daily", slug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${slug}.html`);
+    box.appendChild(div);
+  });
+}
+
+// === Calendar ===
+function getExistingJournalSlugs() {
+  return Object.keys(localStorage)
+    .filter(k => k.startsWith("bujocache-daily-"))
+    .map(k => k.replace("bujocache-daily-", ""));
+}
+
+function renderCalendar() {
+  const year = calendarDate.getFullYear();
+  const month = calendarDate.getMonth();
+  const todaySlug = getTodaySlug();
+  const existingSlugs = getExistingJournalSlugs();
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  calendarMonthLabel.textContent = new Date(year, month).toLocaleString("default", { month: "long", year: "numeric" }).toUpperCase();
+  calendarGrid.innerHTML = "";
+
+  const firstDay = new Date(year, month, 1).getDay();
+  for (let i = 0; i < firstDay; i++) {
+    calendarGrid.appendChild(document.createElement("div"));
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const cell = document.createElement("div");
+    cell.textContent = d;
+    cell.style.textAlign = "center";
+    cell.style.padding = "6px";
+    cell.style.border = "1px solid #444";
+    cell.style.cursor = "pointer";
+    const slug = new Date(year, month, d).toISOString().slice(0, 10);
+
+    if (slug === todaySlug) cell.classList.add("calendar-today");
+    if (existingSlugs.includes(slug)) cell.classList.add("calendar-entry-dot");
+
+    cell.onclick = () => {
+      selectedCalendarDate = slug;
+      calendarCreateBtn.disabled = false;
+      document.querySelectorAll("#calendar-grid div").forEach(c => c.classList.remove("calendar-selected"));
+      cell.classList.add("calendar-selected");
+    };
+    calendarGrid.appendChild(cell);
+  }
+}
+
+// === Daily Index Buttons ===
+["today", "yesterday", "tomorrow"].forEach(key => {
+  document.querySelector(`[data-entry="${key}"]`).onclick = () => {
+    const offset = key === "yesterday" ? -1 : key === "tomorrow" ? 1 : 0;
+    const slug = getTodaySlug(offset);
     loadContent("daily", slug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${slug}.html`);
   };
-  </script>
-</body>
-</html>
+});
+
+// === Calendar Buttons ===
+document.getElementById("calendar-btn").onclick = () => {
+  calendarPopup.style.display = "flex";
+  renderCalendar();
+};
+document.getElementById("prev-month").onclick = () => {
+  calendarDate.setMonth(calendarDate.getMonth() - 1);
+  renderCalendar();
+};
+document.getElementById("next-month").onclick = () => {
+  calendarDate.setMonth(calendarDate.getMonth() + 1);
+  renderCalendar();
+};
+calendarCreateBtn.onclick = () => {
+  if (!selectedCalendarDate) return;
+  const slug = selectedCalendarDate;
+  calendarPopup.style.display = "none";
+  loadContent("daily", slug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${slug}.html`);
+};
+
+// === Undo / Redo ===
+function captureSnapshot() {
+  undoStack.push(content.innerHTML);
+  redoStack = [];
+}
+
+function applySnapshot(snapshot) {
+  if (!snapshot) return;
+  content.innerHTML = snapshot;
+  forceCheckboxAttrs();
+  saveContent();
+}
+
+document.addEventListener("keydown", e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
+    e.preventDefault();
+    const snap = undoStack.pop();
+    if (snap) {
+      redoStack.push(content.innerHTML);
+      applySnapshot(snap);
+    }
+  } else if ((e.metaKey || e.ctrlKey) && (e.key === "y" || (e.key === "Z" && e.shiftKey))) {
+    e.preventDefault();
+    const snap = redoStack.pop();
+    if (snap) {
+      undoStack.push(content.innerHTML);
+      applySnapshot(snap);
+    }
+  }
+});
+
+content.addEventListener("input", () => {
+  captureSnapshot();
+  saveContent();
+});
+
+// === Drag / Sort Mode ===
+document.getElementById("dragToggleBtn").onclick = () => {
+  dragMode = !dragMode;
+  const btn = document.getElementById("dragToggleBtn");
+  btn.classList.toggle("active", dragMode);
+
+  document.querySelectorAll(".entry-line").forEach(line => {
+    line.classList.toggle("drag-enabled", dragMode);
+    const txt = line.querySelector(".line-text");
+    if (txt) txt.contentEditable = !dragMode;
+    const dragIcon = line.querySelector(".drag-handle");
+    if (dragIcon) dragIcon.style.display = dragMode ? "inline-block" : "none";
+  });
+};
+
+new Sortable(content, {
+  handle: ".drag-handle",
+  animation: 150,
+  draggable: ".entry-line",
+  ghostClass: "sortable-ghost",
+  onEnd: () => saveContent()
+});
+</script>
+<script>
+// === Collection UI Logic ===
+function toggleCollectionPopup() {
+  const popup = document.getElementById("collection-popup");
+  popup.style.display = popup.style.display === "none" ? "flex" : "none";
+}
+
+function hideRenamePopup() {
+  document.getElementById("rename-popup").style.display = "none";
+}
+
+function hideDeletePopup() {
+  document.getElementById("delete-popup").style.display = "none";
+}
+
+// === Create Collection ===
+function createCollection() {
+  const input = document.getElementById("new-collection-name");
+  const name = input.value.trim().toUpperCase().replace(/\s+/g, "-");
+  if (!name) return;
+  const html = `<!-- version:${new Date().toISOString()} -->\n<div class="entry-line"><div class="drag-handle">☰</div><input type="checkbox"><div class="line-text">New collection: ${name}</div></div>`;
+  fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ date: name, content: encodeHTML(html), mode: "collection" })
+  }).then(() => {
+    input.value = "";
+    toggleCollectionPopup();
+    const updated = [name, ...new Set([name, ...JSON.parse(localStorage.getItem("collections-list") || "[]")])];
+    localStorage.setItem("collections-list", JSON.stringify(updated));
+    renderCollections(updated);
+  });
+}
+
+// === Rename Collection ===
+function confirmRename() {
+  const newName = document.getElementById("rename-input").value.trim().toUpperCase().replace(/\s+/g, "-");
+  if (!newName || !window._renameTarget) return;
+  fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ rename: window._renameTarget, to: newName, mode: "collection" })
+  }).then(() => {
+    hideRenamePopup();
+    const updated = JSON.parse(localStorage.getItem("collections-list") || "[]").map(s => s === window._renameTarget ? newName : s);
+    localStorage.setItem("collections-list", JSON.stringify(updated));
+    renderCollections(updated);
+  });
+}
+
+// === Delete Collection ===
+function confirmDelete() {
+  if (!window._deleteTarget) return;
+  fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ delete: window._deleteTarget, mode: "collection" })
+  }).then(() => {
+    hideDeletePopup();
+    const updated = JSON.parse(localStorage.getItem("collections-list") || "[]").filter(s => s !== window._deleteTarget);
+    localStorage.setItem("collections-list", JSON.stringify(updated));
+    renderCollections(updated);
+  });
+}
+
+// === Load Collection List from Cache + GitHub
+function loadCollectionsList() {
+  const box = document.getElementById("collections-list");
+  const stored = localStorage.getItem("collections-list");
+  let slugs = stored ? JSON.parse(stored) : [];
+
+  // Show cached list first for speed
+  renderCollections(slugs);
+
+  // Refresh from GitHub
+  fetch("https://api.github.com/repos/lebron1212/bulletjournal/contents/journals/collections")
+    .then(res => res.ok ? res.json() : [])
+    .then(data => {
+      const remoteSlugs = data
+        .filter(i => i.name.startsWith("collection-") && i.name.endsWith(".html"))
+        .map(i => i.name.replace("collection-", "").replace(".html", ""));
+      localStorage.setItem("collections-list", JSON.stringify(remoteSlugs));
+      renderCollections(remoteSlugs);
+    });
+}
+
+// === Render Collections List
+function renderCollections(slugs) {
+  const box = document.getElementById("collections-list");
+  box.innerHTML = "";
+  slugs.forEach(slug => {
+    const div = document.createElement("div");
+    div.className = "item";
+    div.dataset.entry = slug;
+    div.textContent = slug;
+
+    const ctrl = document.createElement("div");
+    ctrl.className = "item-controls";
+
+    const rename = document.createElement("button");
+    rename.className = "icon-btn";
+    rename.innerText = "✎";
+    rename.onclick = e => {
+      e.stopPropagation();
+      window._renameTarget = slug;
+      document.getElementById("rename-input").value = slug;
+      document.getElementById("rename-popup").style.display = "flex";
+    };
+
+    const del = document.createElement("button");
+    del.className = "icon-btn";
+    del.innerText = "✕";
+    del.onclick = e => {
+      e.stopPropagation();
+      window._deleteTarget = slug;
+      document.getElementById("delete-popup").style.display = "flex";
+    };
+
+    ctrl.appendChild(rename);
+    ctrl.appendChild(del);
+    div.appendChild(ctrl);
+
+    div.onclick = () => {
+      loadContent("collection", slug, slug, `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/collections/collection-${slug}.html`);
+    };
+
+    box.appendChild(div);
+  });
+}
+
+// === Final Init ===
+window.onload = () => {
+  recentEntries = JSON.parse(localStorage.getItem("recent-entries") || "[]");
+  renderRecents();
+  loadCollectionsList();
+  const slug = getTodaySlug();
+  loadContent("daily", slug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${slug}.html`);
+};
+</script>

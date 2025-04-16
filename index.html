@@ -17,7 +17,9 @@
       height: 100%;
       background: transparent;
       color: #eee;
+      overflow: hidden;
     }
+
     body { display: flex; flex-direction: column; }
 
     #wrapper {
@@ -26,6 +28,7 @@
       padding: 40px 20px;
       width: 100%;
       gap: 32px;
+      overflow: hidden;
     }
 
     @media (max-width: 700px) {
@@ -44,11 +47,18 @@
       }
     }
 
+    ::-webkit-scrollbar {
+      width: 0px;
+      height: 0px;
+      background: transparent;
+    }
+
     .panel {
       width: 220px;
       flex-shrink: 0;
       padding: 28px;
       position: relative;
+      overflow-y: hidden;
     }
 
     #calendar-btn {
@@ -214,6 +224,12 @@
       line-height: 1.9;
       letter-spacing: 0.04em;
       background: none;
+      overflow-y: auto;
+      max-height: calc(100vh - 140px);
+    }
+
+    .notes::-webkit-scrollbar {
+      display: none;
     }
 
     #sync-status {
@@ -252,6 +268,11 @@
       align-items: flex-start;
       gap: 10px;
       margin-bottom: 12px;
+      cursor: grab;
+    }
+
+    .entry-line:active {
+      cursor: grabbing;
     }
 
     .entry-line input[type=checkbox] {
@@ -392,7 +413,7 @@
       <div class="header">
         <div style="display: flex; align-items: baseline;">
           <div id="entry-title">DAILY LOG</div>
-          <div id="entry-date">MON, APR 14</div>
+          <div id="entry-date">LOADING…</div>
         </div>
       </div>
       <div id="journal-content" class="notes" contenteditable="true"></div>
@@ -408,51 +429,48 @@
     <label><input type="checkbox" id="hide-completed" onchange="toggleCompleted()" /> HIDE COMPLETED</label>
   </div>
 
-<script>
-// Accurate Today / Yesterday / Tomorrow assignment
-function setRelativeIndexDates() {
-  const today = new Date();
-  const iso = d => d.toISOString().slice(0, 10);
-  const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
-  const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+  <script>
+    // Assign actual dates to index items
+    function setRelativeIndexDates() {
+      const today = new Date();
+      const iso = d => d.toISOString().slice(0, 10);
+      const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+      const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
 
-  document.getElementById("yesterday-entry").setAttribute("data-entry", iso(yesterday));
-  document.getElementById("today-entry").setAttribute("data-entry", iso(today));
-  document.getElementById("tomorrow-entry").setAttribute("data-entry", iso(tomorrow));
-}
+      document.getElementById("yesterday-entry").setAttribute("data-entry", iso(yesterday));
+      document.getElementById("today-entry").setAttribute("data-entry", iso(today));
+      document.getElementById("tomorrow-entry").setAttribute("data-entry", iso(tomorrow));
+    }
 
-function getRelativeSlug(type) {
-  const date = new Date();
-  if (type === "yesterday") date.setDate(date.getDate() - 1);
-  if (type === "tomorrow") date.setDate(date.getDate() + 1);
-  return date.toISOString().slice(0, 10);
-}
+    function getRelativeSlug(type) {
+      const date = new Date();
+      if (type === "yesterday") date.setDate(date.getDate() - 1);
+      if (type === "tomorrow") date.setDate(date.getDate() + 1);
+      return date.toISOString().slice(0, 10);
+    }
 
-// Entry loading buttons (accurate to local date)
-document.getElementById("yesterday-entry").onclick = () => loadSyncedContent(getRelativeSlug("yesterday"));
-document.getElementById("today-entry").onclick = () => loadSyncedContent(getRelativeSlug("today"));
-document.getElementById("tomorrow-entry").onclick = () => loadSyncedContent(getRelativeSlug("tomorrow"));
+    document.getElementById("yesterday-entry").onclick = () => loadSyncedContent(getRelativeSlug("yesterday"));
+    document.getElementById("today-entry").onclick = () => loadSyncedContent(getRelativeSlug("today"));
+    document.getElementById("tomorrow-entry").onclick = () => loadSyncedContent(getRelativeSlug("tomorrow"));
 
-// Calendar handling
-document.getElementById("calendar-btn").addEventListener("click", () => {
-  const popup = document.getElementById("calendar-popup");
-  popup.style.display = popup.style.display === "block" ? "none" : "block";
-});
+    document.getElementById("calendar-btn").addEventListener("click", () => {
+      const popup = document.getElementById("calendar-popup");
+      popup.style.display = popup.style.display === "block" ? "none" : "block";
+    });
 
-document.getElementById("calendar-input").addEventListener("change", e => {
-  if (e.target.value) {
-    loadSyncedContent(e.target.value);
-    document.getElementById("calendar-popup").style.display = "none";
-  }
-});
-</script>
+    document.getElementById("calendar-input").addEventListener("change", e => {
+      if (e.target.value) {
+        loadSyncedContent(e.target.value);
+        document.getElementById("calendar-popup").style.display = "none";
+      }
+    });
+
+    setRelativeIndexDates();
+  </script>
 <script>
 const content = document.getElementById("journal-content");
 const dateLabel = document.getElementById("entry-date");
 const title = document.getElementById("entry-title");
-const calendarBtn = document.getElementById("calendar-btn");
-const calendarPopup = document.getElementById("calendar-popup");
-const calendarInput = document.getElementById("calendar-input");
 const collectionsListContainer = document.getElementById("collections-list");
 
 let currentMode = "daily";
@@ -607,8 +625,8 @@ function createCollection() {
   const slug = name.toLowerCase().replace(/\s+/g, "-");
   if (!collectionsList.includes(slug)) {
     collectionsList.push(slug);
-    renderCollectionItem(slug);
     saveCollectionsIndex();
+    loadCollectionsList();
   }
   nameInput.value = "";
   toggleCollectionPopup();
@@ -636,6 +654,9 @@ function renameCollectionPrompt(oldSlug) {
     collectionsList[index] = newSlug;
     saveCollectionsIndex();
     loadCollectionsList();
+    if (currentSlug === oldSlug && currentMode === "collection") {
+      loadCollection(newSlug);
+    }
   }
 }
 
@@ -644,6 +665,11 @@ function deleteCollection(slug) {
   collectionsList = collectionsList.filter(s => s !== slug);
   saveCollectionsIndex();
   loadCollectionsList();
+  if (currentSlug === slug && currentMode === "collection") {
+    content.innerHTML = "";
+    title.textContent = "DAILY LOG";
+    dateLabel.textContent = "";
+  }
 }
 
 function saveCollectionsIndex() {
@@ -667,9 +693,9 @@ function loadCollectionsList() {
       data.forEach(renderCollectionItem);
       highlightActive(currentSlug);
       new Sortable(collectionsListContainer, {
-        animation: 200,
+        animation: 150,
         onEnd: () => {
-          collectionsList = Array.from(document.querySelectorAll("#collections-list .item")).map(el => el.dataset.entry);
+          collectionsList = Array.from(document.querySelectorAll("#collections-list .item")).map(i => i.dataset.entry);
           saveCollectionsIndex();
         }
       });
@@ -684,8 +710,17 @@ function filterIndex() {
   });
 }
 
+// Drag-and-drop for .entry-line
+new Sortable(content, {
+  handle: ".entry-line",
+  animation: 150,
+  ghostClass: "dragging",
+  onEnd: debounceSave
+});
+
 content.addEventListener("input", debounceSave);
 content.addEventListener("change", debounceSave);
+
 content.addEventListener("keydown", e => {
   const isMac = navigator.platform.toUpperCase().includes("MAC");
   const meta = isMac ? e.metaKey : e.ctrlKey;
@@ -737,7 +772,6 @@ content.addEventListener("keydown", e => {
   }
 });
 
-setRelativeIndexDates();
 loadCollectionsList();
 loadSyncedContent(currentSlug);
 </script>

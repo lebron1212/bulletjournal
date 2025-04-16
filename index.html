@@ -493,7 +493,8 @@ function formatPrettyDate(dateStr) {
 }
 function highlightActive(slug) {
   document.querySelectorAll(".item").forEach(i => i.classList.remove("active"));
-  document.querySelector(`.item[data-entry="${slug}"]`)?.classList.add("active");
+  const el = document.querySelector(`.item[data-entry="${slug}"]`);
+  if (el) el.classList.add("active");
 }
 function ensureEditableLine() {
   if (content.innerHTML.trim() === "") addEntryLine("Start writing...");
@@ -530,7 +531,7 @@ function loadContent(mode, slug, label, url) {
   highlightActive(slug);
 
   if (!["today", "yesterday", "tomorrow"].includes(slug)) {
-    recentEntries = [slug, ...recentEntries.filter(s => s !== slug)].slice(0, 2);
+    recentEntries = [slug, ...recentEntries.filter(s => s !== slug && !["today", "tomorrow", "yesterday"].includes(s))].slice(0, 2);
     localStorage.setItem("recent-entries", JSON.stringify(recentEntries));
     renderRecents();
   }
@@ -561,7 +562,7 @@ function renderRecents() {
   const box = document.getElementById("recent-entries");
   box.innerHTML = "";
   recentEntries
-    .filter(slug => !["today", "yesterday", "tomorrow"].includes(slug))
+    .filter(slug => !["today", "tomorrow", "yesterday"].includes(slug))
     .forEach(slug => {
       const div = document.createElement("div");
       div.className = "item";
@@ -651,33 +652,35 @@ function renderCollectionItem(slug) {
 
 function saveCollections() {
   const json = JSON.stringify(collectionsList);
-  localStorage.setItem("bujocache-collections-index", encodeHTML(json));
+  const versioned = `<!-- version:${new Date().toISOString()} -->\n${json}`;
+  localStorage.setItem("bujocache-collections-index", encodeHTML(versioned));
   debounceSyncCollectionList();
 }
 
 function loadCollectionsList() {
   document.getElementById("collections-list").innerHTML = "";
-  const local = localStorage.getItem("bujocache-collections-index");
+  const localRaw = localStorage.getItem("bujocache-collections-index");
+  const local = localRaw ? decodeHTML(localRaw) : "";
+  const localVer = extractVersion(local);
+  const localJson = local.replace(/<!--.*?-->/, "").trim();
 
   fetch("https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/collections/collections-index.json")
     .then(res => res.ok ? res.text() : null)
     .then(remote => {
-      const localData = local ? decodeHTML(local) : "";
-      const localVer = extractVersion(localData);
-      const remoteVer = extractVersion(remote);
-      if (remoteVer > localVer && remote) {
-        collectionsList = JSON.parse(remote);
+      const remoteVer = extractVersion(remote || "");
+      const remoteJson = (remote || "").replace(/<!--.*?-->/, "").trim();
+      if (remoteVer > localVer) {
+        collectionsList = JSON.parse(remoteJson);
         localStorage.setItem("bujocache-collections-index", encodeHTML(remote));
-      } else if (localData) {
-        collectionsList = JSON.parse(localData);
+      } else {
+        collectionsList = localJson ? JSON.parse(localJson) : [];
       }
       collectionsList.forEach(renderCollectionItem);
       highlightActive(currentSlug);
-    }).catch(() => {
-      if (local) {
-        collectionsList = JSON.parse(decodeHTML(local));
-        collectionsList.forEach(renderCollectionItem);
-      }
+    })
+    .catch(() => {
+      collectionsList = localJson ? JSON.parse(localJson) : [];
+      collectionsList.forEach(renderCollectionItem);
     });
 }
 

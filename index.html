@@ -218,7 +218,7 @@
 </head>
 <body>
   <div id="wrapper">
-    <!-- Sidebar and journal panel go here -->
+    <!-- Sidebar -->
     <div class="panel">
       <div class="card" id="index-card">
         <h2>INDEX</h2>
@@ -235,7 +235,7 @@
         <h2>COLLECTIONS</h2>
         <span class="add-collection-link" onclick="toggleCollectionPopup()">+ ADD</span>
 
-        <!-- Popup to create a collection -->
+        <!-- Popup: Create Collection -->
         <div id="collection-popup" class="popup" style="display:none;">
           <h3>NEW COLLECTION</h3>
           <input id="new-collection-name" placeholder="Collection name" />
@@ -245,11 +245,11 @@
           </div>
         </div>
 
-        <!-- Live collection list -->
         <div id="collections-list"></div>
       </div>
     </div>
 
+    <!-- Journal Panel -->
     <div id="journal-panel" class="card" style="flex: 1; display: flex; flex-direction: column;">
       <div class="header">
         <div style="display: flex; flex-direction: column;">
@@ -262,7 +262,7 @@
     </div>
   </div>
 
-  <!-- Calendar Popup -->
+  <!-- Popup: Calendar Date Selector -->
   <div id="calendar-popup" class="popup" style="display:none;">
     <h3>DATE INPUT</h3>
     <p>PLEASE SELECT A DATE TO CREATE OR LOAD</p>
@@ -278,7 +278,7 @@
     </div>
   </div>
 
-  <!-- Rename Collection -->
+  <!-- Popup: Rename Collection -->
   <div id="rename-popup" class="popup" style="display:none;">
     <h3>RENAME COLLECTION</h3>
     <input id="rename-input" placeholder="New name" />
@@ -288,7 +288,7 @@
     </div>
   </div>
 
-  <!-- Delete Collection -->
+  <!-- Popup: Delete Collection -->
   <div id="delete-popup" class="popup" style="display:none;">
     <h3>DELETE COLLECTION</h3>
     <p>ARE YOU SURE YOU WANT TO DELETE THIS COLLECTION?</p>
@@ -320,7 +320,7 @@ let undoStack = [], redoStack = [];
 let selectedCalendarDate = null;
 let calendarDate = new Date();
 
-// Utility
+// === UTILS ===
 function getTodaySlug(offset = 0) {
   const d = new Date();
   d.setDate(d.getDate() + offset);
@@ -384,7 +384,7 @@ function addEntryLine(text = "") {
   content.appendChild(div);
 }
 
-// === Save Logic ===
+// === SYNCING ===
 function saveLocal() {
   const html = `<!-- version:${new Date().toISOString()} -->\n${content.innerHTML}`;
   localStorage.setItem(`bujocache-${currentMode}-${currentSlug}`, encodeHTML(html));
@@ -412,14 +412,14 @@ function saveContent() {
   debounceSync();
 }
 
-// === Highlight Active
+// === LOAD / SWITCH ENTRIES ===
 function highlightActive(slug) {
   document.querySelectorAll(".item").forEach(i => {
     const isMatch = i.dataset.entry === slug;
     i.classList.toggle("active", isMatch);
   });
 }
-// === Content Loading ===
+
 function loadContent(mode, slug, label, url) {
   currentMode = mode;
   currentSlug = slug;
@@ -431,7 +431,7 @@ function loadContent(mode, slug, label, url) {
   const yest = getTodaySlug(-1);
   const tomo = getTodaySlug(1);
 
-  if (![today, yest, tomo].includes(slug)) {
+  if (![today, yest, tomo].includes(slug) && mode === "daily") {
     recentEntries = [slug, ...recentEntries.filter(s => s !== slug && ![today, yest, tomo].includes(s))].slice(0, 2);
     localStorage.setItem("recent-entries", JSON.stringify(recentEntries));
     renderRecents();
@@ -455,6 +455,7 @@ function loadContent(mode, slug, label, url) {
   }).catch(() => updateStatus("OFFLINE"));
 }
 
+// === RECENTS LOGIC ===
 function renderRecents() {
   const box = document.getElementById("recent-entries");
   box.innerHTML = "";
@@ -470,141 +471,15 @@ function renderRecents() {
     box.appendChild(div);
   });
 }
-
-// === Calendar ===
-function getExistingJournalSlugs() {
-  return Object.keys(localStorage)
-    .filter(k => k.startsWith("bujocache-daily-"))
-    .map(k => k.replace("bujocache-daily-", ""));
-}
-
-function renderCalendar() {
-  const year = calendarDate.getFullYear();
-  const month = calendarDate.getMonth();
-  const todaySlug = getTodaySlug();
-  const existingSlugs = getExistingJournalSlugs();
-
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  calendarMonthLabel.textContent = new Date(year, month).toLocaleString("default", { month: "long", year: "numeric" }).toUpperCase();
-  calendarGrid.innerHTML = "";
-
-  const firstDay = new Date(year, month, 1).getDay();
-  for (let i = 0; i < firstDay; i++) {
-    calendarGrid.appendChild(document.createElement("div"));
-  }
-
-  for (let d = 1; d <= daysInMonth; d++) {
-    const cell = document.createElement("div");
-    cell.textContent = d;
-    cell.style.textAlign = "center";
-    cell.style.padding = "6px";
-    cell.style.border = "1px solid #444";
-    cell.style.cursor = "pointer";
-    const slug = new Date(year, month, d).toISOString().slice(0, 10);
-
-    if (slug === todaySlug) cell.classList.add("calendar-today");
-    if (existingSlugs.includes(slug)) cell.classList.add("calendar-entry-dot");
-
-    cell.onclick = () => {
-      selectedCalendarDate = slug;
-      calendarCreateBtn.disabled = false;
-      document.querySelectorAll("#calendar-grid div").forEach(c => c.classList.remove("calendar-selected"));
-      cell.classList.add("calendar-selected");
-    };
-    calendarGrid.appendChild(cell);
-  }
-}
-
-// === Daily Index Buttons ===
-["today", "yesterday", "tomorrow"].forEach(key => {
-  document.querySelector(`[data-entry="${key}"]`).onclick = () => {
-    const offset = key === "yesterday" ? -1 : key === "tomorrow" ? 1 : 0;
-    const slug = getTodaySlug(offset);
-    loadContent("daily", slug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${slug}.html`);
-  };
-});
-
-// === Calendar Buttons ===
-document.getElementById("calendar-btn").onclick = () => {
-  calendarPopup.style.display = "flex";
-  renderCalendar();
+document.getElementById("recents-toggle").onclick = () => {
+  const box = document.getElementById("recent-entries");
+  const expanded = box.style.display !== "none";
+  box.style.display = expanded ? "none" : "block";
+  document.getElementById("recents-toggle").textContent = expanded ? "▶" : "▼";
 };
-document.getElementById("prev-month").onclick = () => {
-  calendarDate.setMonth(calendarDate.getMonth() - 1);
-  renderCalendar();
-};
-document.getElementById("next-month").onclick = () => {
-  calendarDate.setMonth(calendarDate.getMonth() + 1);
-  renderCalendar();
-};
-calendarCreateBtn.onclick = () => {
-  if (!selectedCalendarDate) return;
-  const slug = selectedCalendarDate;
-  calendarPopup.style.display = "none";
-  loadContent("daily", slug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${slug}.html`);
-};
+// === Continue from 479 ===
 
-// === Undo / Redo ===
-function captureSnapshot() {
-  undoStack.push(content.innerHTML);
-  redoStack = [];
-}
-
-function applySnapshot(snapshot) {
-  if (!snapshot) return;
-  content.innerHTML = snapshot;
-  forceCheckboxAttrs();
-  saveContent();
-}
-
-document.addEventListener("keydown", e => {
-  if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
-    e.preventDefault();
-    const snap = undoStack.pop();
-    if (snap) {
-      redoStack.push(content.innerHTML);
-      applySnapshot(snap);
-    }
-  } else if ((e.metaKey || e.ctrlKey) && (e.key === "y" || (e.key === "Z" && e.shiftKey))) {
-    e.preventDefault();
-    const snap = redoStack.pop();
-    if (snap) {
-      undoStack.push(content.innerHTML);
-      applySnapshot(snap);
-    }
-  }
-});
-
-content.addEventListener("input", () => {
-  captureSnapshot();
-  saveContent();
-});
-
-// === Drag / Sort Mode ===
-document.getElementById("dragToggleBtn").onclick = () => {
-  dragMode = !dragMode;
-  const btn = document.getElementById("dragToggleBtn");
-  btn.classList.toggle("active", dragMode);
-
-  document.querySelectorAll(".entry-line").forEach(line => {
-    line.classList.toggle("drag-enabled", dragMode);
-    const txt = line.querySelector(".line-text");
-    if (txt) txt.contentEditable = !dragMode;
-    const dragIcon = line.querySelector(".drag-handle");
-    if (dragIcon) dragIcon.style.display = dragMode ? "inline-block" : "none";
-  });
-};
-
-new Sortable(content, {
-  handle: ".drag-handle",
-  animation: 150,
-  draggable: ".entry-line",
-  ghostClass: "sortable-ghost",
-  onEnd: () => saveContent()
-});
-</script>
-<script>
-// === Collection UI Logic ===
+// === Collection Utilities ===
 function toggleCollectionPopup() {
   const popup = document.getElementById("collection-popup");
   popup.style.display = popup.style.display === "none" ? "flex" : "none";
@@ -636,7 +511,6 @@ function createCollection() {
     renderCollections(updated);
   });
 }
-
 // === Rename Collection ===
 function confirmRename() {
   const newName = document.getElementById("rename-input").value.trim().toUpperCase().replace(/\s+/g, "-");
@@ -667,14 +541,13 @@ function confirmDelete() {
     renderCollections(updated);
   });
 }
-
 // === Load Collection List from Cache + GitHub
 function loadCollectionsList() {
   const box = document.getElementById("collections-list");
   const stored = localStorage.getItem("collections-list");
   let slugs = stored ? JSON.parse(stored) : [];
 
-  // Show cached list first for speed
+  // Show cached list first
   renderCollections(slugs);
 
   // Refresh from GitHub
@@ -733,12 +606,26 @@ function renderCollections(slugs) {
   });
 }
 
+// === Recents Toggle ===
+document.getElementById("recents-toggle").onclick = () => {
+  const box = document.getElementById("recent-entries");
+  box.style.display = box.style.display === "none" ? "block" : "none";
+};
+
 // === Final Init ===
 window.onload = () => {
-  recentEntries = JSON.parse(localStorage.getItem("recent-entries") || "[]");
+  recentEntries = JSON.parse(localStorage.getItem("recent-entries") || "[]").filter(slug => {
+    const isDate = /^\d{4}-\d{2}-\d{2}$/.test(slug);
+    const today = getTodaySlug();
+    const yest = getTodaySlug(-1);
+    const tomo = getTodaySlug(1);
+    return isDate && slug !== today && slug !== yest && slug !== tomo;
+  });
   renderRecents();
   loadCollectionsList();
   const slug = getTodaySlug();
   loadContent("daily", slug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${slug}.html`);
 };
 </script>
+</body>
+</html>

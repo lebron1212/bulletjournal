@@ -7,20 +7,25 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <style>
-    *, ::after, ::before { box-sizing: border-box; }
+    *, ::before, ::after {
+      box-sizing: border-box;
+    }
+
     html, body {
       font-family: 'IBM Plex Mono', monospace;
-      text-transform: uppercase;
       margin: 0;
       padding: 0;
       width: 100%;
       height: 100%;
       background: transparent;
       color: #eee;
+      text-transform: uppercase;
       overflow: hidden;
     }
 
-    body { display: flex; flex-direction: column; }
+    ::-webkit-scrollbar {
+      display: none;
+    }
 
     #wrapper {
       display: flex;
@@ -36,25 +41,41 @@
         flex-direction: column;
         padding: 20px 16px;
       }
+
       .panel {
         width: 100%;
-        margin: 0 0 20px 0;
+        margin-bottom: 20px;
         padding: 16px;
       }
+
       #journal-panel {
         max-width: 100%;
         padding: 20px;
       }
     }
 
-    ::-webkit-scrollbar { width: 0px; height: 0px; background: transparent; }
-
     .panel {
       width: 220px;
       flex-shrink: 0;
       padding: 28px;
       position: relative;
-      overflow-y: hidden;
+    }
+
+    .card {
+      background: none;
+      border: 1px solid #333;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      padding: 18px 16px;
+      position: relative;
+    }
+
+    .card h2 {
+      font-size: 0.75rem;
+      margin: 0 0 12px;
+      border-bottom: 1px solid #444;
+      padding-bottom: 6px;
+      font-weight: 700;
     }
 
     #calendar-btn {
@@ -76,27 +97,26 @@
       left: 50%;
       transform: translate(-50%, -50%);
       background: #111;
-      padding: 18px 22px;
+      padding: 20px;
       border: 1px solid #444;
       border-radius: 12px;
       z-index: 1001;
       display: none;
-      color: #fff;
       width: 300px;
       max-width: 90vw;
+      color: #fff;
     }
 
     #calendar-popup h3 {
-      margin: 0 0 6px;
       font-size: 0.75rem;
-      font-weight: 700;
+      margin: 0 0 6px;
       text-align: center;
     }
 
     #calendar-popup p {
       font-size: 0.65rem;
+      margin: 0 0 12px;
       text-align: center;
-      margin-bottom: 10px;
     }
 
     #calendar-header {
@@ -104,16 +124,16 @@
       justify-content: space-between;
       align-items: center;
       font-size: 0.7rem;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
     }
 
     #calendar-header button {
       background: none;
       border: none;
       color: inherit;
-      font-size: 1rem;
+      font-size: 1.1rem;
       cursor: pointer;
-      padding: 0 6px;
+      padding: 2px 6px;
     }
 
     #calendar-grid {
@@ -141,15 +161,32 @@
       font-weight: bold;
     }
 
-    #calendar-popup input[type="date"] {
-      font-family: 'IBM Plex Mono', monospace;
+    .calendar-selected {
+      border: 1px solid #fff;
+      background: #333;
+    }
+
+    .calendar-popup-buttons {
+      display: flex;
+      gap: 8px;
+    }
+
+    .calendar-popup-buttons button {
+      flex: 1;
+      padding: 6px;
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      border-radius: 6px;
       background: none;
-      border: 1px solid #444;
       color: #fff;
-      padding: 4px 6px;
-      font-size: 0.7rem;
-      text-transform: none;
-      width: 100%;
+      border: 1px solid #fff;
+      cursor: pointer;
+    }
+
+    .calendar-popup-buttons button:hover {
+      background: #222;
     }
 
     #index-search {
@@ -157,48 +194,30 @@
       width: 100%;
       font-size: 0.7rem;
       letter-spacing: 0.08em;
-      margin: 12px 0 12px;
+      margin: 12px 0;
       padding: 6px 8px;
       background: none;
       border: 1px solid #444;
       border-radius: 6px;
       color: #eee;
-      outline: none;
     }
 
     #index-search:focus {
       border-color: #0af;
+      outline: none;
     }
 
-    .card {
-      background: none;
-      border: 1px solid #333;
-      border-radius: 12px;
-      margin-bottom: 20px;
-      padding: 18px 16px;
-      position: relative;
-    }
-
-    .card h2 {
-      font-size: 0.75rem;
-      margin: 0 0 12px;
-      border-bottom: 1px solid #444;
-      padding-bottom: 6px;
-      font-weight: 700;
-    }
-
-    .card .item {
+    .item {
       font-size: 0.75rem;
       letter-spacing: 0.03em;
       cursor: pointer;
       margin-bottom: 8px;
-      transition: opacity 0.2s;
-      color: #888;
       display: flex;
       justify-content: space-between;
+      color: #888;
     }
 
-    .card .item.active {
+    .item.active {
       font-weight: bold;
       color: #fff;
     }
@@ -230,6 +249,49 @@
       display: inline-block;
     }
 
+    #collection-popup {
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    #collection-popup input {
+      width: 100%;
+      padding: 6px;
+      border: 1px solid #444;
+      border-radius: 4px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.75rem;
+      text-transform: none;
+      background: none;
+      color: #fff;
+    }
+
+    .popup-buttons {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .popup-buttons button {
+      flex: 1;
+      padding: 6px;
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+      border-radius: 6px;
+      background: none;
+      color: #fff;
+      border: 1px solid #fff;
+      cursor: pointer;
+    }
+
+    .popup-buttons button:hover {
+      background: #222;
+    }
+
     .header {
       display: flex;
       justify-content: space-between;
@@ -255,7 +317,7 @@
       position: absolute;
       right: 0;
       top: 0;
-      font-size: 0.9rem;
+      font-size: 1rem;
       border: none;
       background: none;
       color: #999;
@@ -267,7 +329,7 @@
       color: #0af;
     }
 
-    .notes[contenteditable=true] {
+    #journal-content.notes {
       outline: 0;
       flex-grow: 1;
       font-size: 0.85rem;
@@ -278,31 +340,39 @@
       max-height: calc(100vh - 140px);
     }
 
-    .notes::-webkit-scrollbar { display: none; }
-
     .entry-line {
       display: flex;
       align-items: flex-start;
       gap: 10px;
       margin-bottom: 12px;
       cursor: grab;
-    }
-
-    .entry-line:active {
-      cursor: grabbing;
-    }
-
-    .entry-line .drag-handle {
-      cursor: grab;
-      font-size: 0.8rem;
-      user-select: none;
-      padding-top: 3px;
-      flex-shrink: 0;
-      display: none;
+      position: relative;
     }
 
     .entry-line.drag-enabled .drag-handle {
       display: inline-block;
+    }
+
+    .drag-handle {
+      font-size: 0.9rem;
+      cursor: grab;
+      user-select: none;
+      flex-shrink: 0;
+      display: none;
+      opacity: 0.5;
+    }
+
+    .drag-ghost {
+      opacity: 0.3;
+    }
+
+    .drop-line {
+      position: absolute;
+      height: 2px;
+      background: #0af;
+      left: 0;
+      right: 0;
+      top: -1px;
     }
 
     .entry-line input[type=checkbox] {
@@ -316,7 +386,6 @@
       margin-top: 4px;
       border-radius: 4px;
       flex-shrink: 0;
-      box-sizing: border-box;
     }
 
     .entry-line input[type=checkbox]:checked::after {
@@ -342,7 +411,27 @@
       opacity: 0.5;
     }
 
-    /* MODALS will be styled below in Part 2 */
+    #hide-wrapper {
+      position: fixed;
+      bottom: 12px;
+      left: 12px;
+      font-size: 0.6rem;
+      color: #aaa;
+      background: none;
+      padding: 4px 6px;
+      border-radius: 6px;
+      user-select: none;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    #hide-wrapper input {
+      transform: scale(1.1);
+      margin: 0;
+    }
+
     #sync-status {
       position: fixed;
       bottom: 10px;
@@ -375,46 +464,46 @@
     }
 
     @media (prefers-color-scheme: light) {
-      html, body {
-        color: #000;
-      }
+      html, body { color: #000; }
       .card, .panel, .notes, .popup-buttons button {
         border-color: #ccc;
         color: #000;
       }
-      .card h2, .icon-btn, .add-collection-link,
-      #index-search, #collection-popup input {
-        color: #111;
-        border-color: #ccc;
-      }
       .card .item { color: #333; }
       .card .item.active { color: #000; font-weight: bold; }
-      #calendar-btn { color: #000; border-color: #000; }
-      #sync-status { color: #666; }
-      .entry-line input[type="checkbox"] { border: 1px solid #000; }
-      .entry-line input[type="checkbox"]:checked::after { color: #000; }
+      .icon-btn { color: #666; }
+      .icon-btn:hover { color: #000; }
+      #index-search, #collection-popup input, .popup-buttons button {
+        color: #111;
+        border-color: #aaa;
+      }
       #calendar-popup {
         background: #fff;
-        border-color: #aaa;
         color: #000;
-      }
-      #calendar-popup input[type="date"] {
         border-color: #aaa;
-        color: #000;
       }
       .calendar-day {
         border-color: #aaa;
         color: #000;
       }
-      .calendar-day:hover {
-        background: #eee;
-      }
-      .calendar-today {
+      .calendar-day:hover { background: #eee; }
+      .calendar-popup-buttons button {
+        color: #000;
         border-color: #000;
       }
+      #calendar-popup input[type="date"] {
+        color: #000;
+        border-color: #aaa;
+      }
+      #calendar-btn, .drag-toggle-btn {
+        color: #000;
+        border-color: #000;
+      }
+      .entry-line input[type="checkbox"] { border-color: #000; }
+      .entry-line input[type="checkbox"]:checked::after { color: #000; }
+      #hide-wrapper { color: #333; }
     }
   </style>
-</head>
 <body>
   <div id="wrapper">
     <div class="panel">
@@ -430,7 +519,10 @@
             <button id="next-month">&#8594;</button>
           </div>
           <div id="calendar-grid"></div>
-          <input type="date" id="calendar-input" />
+          <div class="calendar-popup-buttons">
+            <button id="calendar-create">CREATE</button>
+            <button onclick="calendarPopup.style.display='none'">CANCEL</button>
+          </div>
         </div>
         <input id="index-search" placeholder="search YYYY-MM-DD" oninput="filterIndex()" />
         <div class="item" id="yesterday-entry" data-entry="">YESTERDAY</div>
@@ -444,8 +536,8 @@
         <div id="collection-popup">
           <input id="new-collection-name" placeholder="Collection name" />
           <div class="popup-buttons">
-            <button onclick="createCollection()">Save</button>
-            <button onclick="toggleCollectionPopup()">Cancel</button>
+            <button onclick="createCollection()">SAVE</button>
+            <button onclick="toggleCollectionPopup()">CANCEL</button>
           </div>
         </div>
         <div id="collections-list"></div>
@@ -458,7 +550,7 @@
           <div id="entry-title">DAILY LOG</div>
           <div id="entry-date"></div>
         </div>
-        <button class="drag-toggle-btn" id="dragToggleBtn" title="Toggle drag mode">✥</button>
+        <button class="drag-toggle-btn" id="dragToggleBtn" title="Reorder Mode">☰</button>
       </div>
       <div id="journal-content" class="notes" contenteditable="true"></div>
     </div>
@@ -473,49 +565,41 @@
     <label><input type="checkbox" id="hide-completed" onchange="toggleCompleted()" /> HIDE COMPLETED</label>
   </div>
 
-  <!-- Rename modal -->
+  <!-- RENAME MODAL -->
   <div id="rename-popup" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#111; color:#fff; padding:20px; border:1px solid #444; border-radius:10px; z-index:1002; width:260px; max-width:90vw;">
     <h3 style="font-size:0.75rem; margin:0 0 8px;">RENAME COLLECTION</h3>
     <input id="rename-input" placeholder="New name" style="width:100%; padding:6px; font-family:'IBM Plex Mono', monospace; background:none; border:1px solid #444; color:#fff; font-size:0.75rem; margin-bottom:10px;" />
     <div class="popup-buttons">
-      <button onclick="confirmRename()">Save</button>
-      <button onclick="hideRenamePopup()">Cancel</button>
+      <button onclick="confirmRename()">SAVE</button>
+      <button onclick="hideRenamePopup()">CANCEL</button>
     </div>
   </div>
 
-  <!-- Delete modal -->
+  <!-- DELETE MODAL -->
   <div id="delete-popup" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#111; color:#fff; padding:20px; border:1px solid #444; border-radius:10px; z-index:1002; width:260px; max-width:90vw;">
     <h3 style="font-size:0.75rem; margin:0 0 8px;">DELETE COLLECTION</h3>
     <p style="font-size:0.65rem; margin-bottom:12px;">Are you sure you want to delete this collection?</p>
     <div class="popup-buttons">
-      <button onclick="confirmDelete()">Delete</button>
-      <button onclick="hideDeletePopup()">Cancel</button>
+      <button onclick="confirmDelete()">DELETE</button>
+      <button onclick="hideDeletePopup()">CANCEL</button>
     </div>
   </div>
 <script>
-const content = document.getElementById("journal-content");
-const dateLabel = document.getElementById("entry-date");
-const title = document.getElementById("entry-title");
-const calendarPopup = document.getElementById("calendar-popup");
-const calendarInput = document.getElementById("calendar-input");
-const calendarGrid = document.getElementById("calendar-grid");
-const collectionsListContainer = document.getElementById("collections-list");
-const renamePopup = document.getElementById("rename-popup");
-const deletePopup = document.getElementById("delete-popup");
-const renameInput = document.getElementById("rename-input");
-const dragToggleBtn = document.getElementById("dragToggleBtn");
-const calendarMonthLabel = document.getElementById("calendar-month");
-let dragMode = false;
-
 let currentMode = "daily";
 let currentSlug = new Date().toISOString().slice(0, 10);
 let collectionsList = [];
 let undoStack = [], redoStack = [];
-
-let renameTargetSlug = "";
-let deleteTargetSlug = "";
-
+let dragMode = false;
 let calendarDate = new Date();
+let selectedCalendarSlug = null;
+let renameTargetSlug = "", deleteTargetSlug = "";
+
+const content = document.getElementById("journal-content");
+const dateLabel = document.getElementById("entry-date");
+const title = document.getElementById("entry-title");
+const calendarPopup = document.getElementById("calendar-popup");
+const calendarGrid = document.getElementById("calendar-grid");
+const calendarMonthLabel = document.getElementById("calendar-month");
 
 function updateStatus(text, isSyncing = false) {
   const label = document.querySelector("#sync-status .label");
@@ -586,7 +670,7 @@ function addEntryLine(text = "") {
 
   const textDiv = document.createElement("div");
   textDiv.className = "line-text";
-  textDiv.contentEditable = true;
+  textDiv.contentEditable = !dragMode;
   textDiv.innerHTML = text || "&nbsp;";
 
   div.appendChild(handle);
@@ -600,9 +684,9 @@ function formatPrettyDate(dateStr) {
   return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }).toUpperCase();
 }
 
-function highlightActive(slugOrDate) {
+function highlightActive(slug) {
   document.querySelectorAll("#index-card .item, #collections-list .item").forEach(el => el.classList.remove("active"));
-  const el = document.querySelector(`[data-entry="${slugOrDate}"]`);
+  const el = document.querySelector(`[data-entry="${slug}"]`);
   if (el) el.classList.add("active");
 }
 
@@ -694,17 +778,17 @@ function renderCollectionItem(slug) {
 
 function showRenamePopup(slug) {
   renameTargetSlug = slug;
-  renameInput.value = slug.toUpperCase();
-  renamePopup.style.display = "block";
+  document.getElementById("rename-input").value = slug.toUpperCase();
+  document.getElementById("rename-popup").style.display = "block";
 }
 
 function hideRenamePopup() {
   renameTargetSlug = "";
-  renamePopup.style.display = "none";
+  document.getElementById("rename-popup").style.display = "none";
 }
 
 function confirmRename() {
-  const newSlug = renameInput.value.trim().toLowerCase().replace(/\s+/g, "-");
+  const newSlug = document.getElementById("rename-input").value.trim().toLowerCase().replace(/\s+/g, "-");
   const index = collectionsList.indexOf(renameTargetSlug);
   if (index !== -1 && newSlug) {
     collectionsList[index] = newSlug;
@@ -719,12 +803,12 @@ function confirmRename() {
 
 function showDeletePopup(slug) {
   deleteTargetSlug = slug;
-  deletePopup.style.display = "block";
+  document.getElementById("delete-popup").style.display = "block";
 }
 
 function hideDeletePopup() {
   deleteTargetSlug = "";
-  deletePopup.style.display = "none";
+  document.getElementById("delete-popup").style.display = "none";
 }
 
 function confirmDelete() {
@@ -772,13 +856,6 @@ function loadCollectionsList() {
     .catch(() => collectionsList = []);
 }
 
-function filterIndex() {
-  const q = document.getElementById("index-search").value.toLowerCase();
-  document.querySelectorAll('#index-card .item').forEach(el => {
-    el.style.display = el.textContent.toLowerCase().includes(q) ? "block" : "none";
-  });
-}
-
 function buildCalendarGrid(monthDate) {
   calendarGrid.innerHTML = "";
   const year = monthDate.getFullYear();
@@ -794,24 +871,25 @@ function buildCalendarGrid(monthDate) {
     el.innerText = i;
     if (slug === new Date().toISOString().slice(0, 10)) el.classList.add("calendar-today");
     el.onclick = () => {
-      loadSyncedContent(slug);
-      calendarPopup.style.display = "none";
+      selectedCalendarSlug = slug;
+      [...calendarGrid.children].forEach(c => c.classList.remove("calendar-selected"));
+      el.classList.add("calendar-selected");
     };
     calendarGrid.appendChild(el);
   }
 }
 
-document.getElementById("calendar-btn").addEventListener("click", () => {
-  calendarPopup.style.display = calendarPopup.style.display === "block" ? "none" : "block";
+document.getElementById("calendar-btn").onclick = () => {
+  calendarPopup.style.display = "block";
   buildCalendarGrid(calendarDate);
-});
+};
 
-calendarInput.addEventListener("change", e => {
-  if (e.target.value) {
-    loadSyncedContent(e.target.value);
+document.getElementById("calendar-create").onclick = () => {
+  if (selectedCalendarSlug) {
     calendarPopup.style.display = "none";
+    loadSyncedContent(selectedCalendarSlug);
   }
-});
+};
 
 document.getElementById("prev-month").onclick = () => {
   calendarDate.setMonth(calendarDate.getMonth() - 1);
@@ -823,11 +901,13 @@ document.getElementById("next-month").onclick = () => {
   buildCalendarGrid(calendarDate);
 };
 
-dragToggleBtn.onclick = () => {
+document.getElementById("dragToggleBtn").onclick = () => {
   dragMode = !dragMode;
-  dragToggleBtn.classList.toggle("active", dragMode);
-  document.querySelectorAll(".entry-line").forEach(el => {
-    el.classList.toggle("drag-enabled", dragMode);
+  document.getElementById("dragToggleBtn").classList.toggle("active", dragMode);
+  document.querySelectorAll(".entry-line").forEach(line => {
+    line.classList.toggle("drag-enabled", dragMode);
+    const text = line.querySelector(".line-text");
+    if (text) text.contentEditable = !dragMode;
   });
 };
 
@@ -835,7 +915,14 @@ new Sortable(content, {
   handle: ".drag-handle",
   draggable: ".entry-line",
   animation: 150,
-  onEnd: debounceSave
+  onStart: function (evt) {
+    const ghost = evt.item;
+    ghost.classList.add("drag-ghost");
+  },
+  onEnd: function (evt) {
+    evt.item.classList.remove("drag-ghost");
+    debounceSave();
+  }
 });
 
 content.addEventListener("input", debounceSave);
@@ -862,7 +949,7 @@ content.addEventListener("keydown", e => {
     }
   }
 
-  if (e.key === "Enter") {
+  if (e.key === "Enter" && !dragMode) {
     e.preventDefault();
     addEntryLine();
     const lines = document.querySelectorAll(".entry-line .line-text");

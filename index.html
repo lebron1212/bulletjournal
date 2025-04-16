@@ -70,10 +70,6 @@
       cursor: pointer;
     }
 
-    @media (prefers-color-scheme: light) {
-      #calendar-btn { color: #000; border-color: #000; }
-    }
-
     #calendar-popup {
       position: fixed;
       top: 50%;
@@ -86,7 +82,7 @@
       z-index: 1001;
       display: none;
       color: #fff;
-      width: 280px;
+      width: 300px;
       max-width: 90vw;
     }
 
@@ -101,6 +97,23 @@
       font-size: 0.65rem;
       text-align: center;
       margin-bottom: 10px;
+    }
+
+    #calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.7rem;
+      margin-bottom: 8px;
+    }
+
+    #calendar-header button {
+      background: none;
+      border: none;
+      color: inherit;
+      font-size: 1rem;
+      cursor: pointer;
+      padding: 0 6px;
     }
 
     #calendar-grid {
@@ -137,6 +150,24 @@
       font-size: 0.7rem;
       text-transform: none;
       width: 100%;
+    }
+
+    #index-search {
+      display: block;
+      width: 100%;
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      margin: 12px 0 12px;
+      padding: 6px 8px;
+      background: none;
+      border: 1px solid #444;
+      border-radius: 6px;
+      color: #eee;
+      outline: none;
+    }
+
+    #index-search:focus {
+      border-color: #0af;
     }
 
     .card {
@@ -199,47 +230,6 @@
       display: inline-block;
     }
 
-    #collection-popup {
-      display: none;
-      flex-direction: column;
-      gap: 10px;
-      margin-top: 10px;
-    }
-
-    #collection-popup input {
-      width: 100%;
-      padding: 6px;
-      border: 1px solid #444;
-      border-radius: 4px;
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 0.75rem;
-      text-transform: none;
-      background: none;
-      color: #fff;
-    }
-
-    .popup-buttons {
-      display: flex;
-      justify-content: space-between;
-      gap: 8px;
-    }
-
-    .popup-buttons button {
-      flex: 1;
-      padding: 6px;
-      font-size: 0.65rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      font-weight: 700;
-      border-radius: 6px;
-      background: none;
-      color: #eee;
-      border: 1px solid #444;
-      cursor: pointer;
-    }
-
-    .popup-buttons button:hover { background: #222; }
-
     .header {
       display: flex;
       justify-content: space-between;
@@ -249,6 +239,32 @@
       font-weight: 700;
       letter-spacing: 0.08em;
       position: relative;
+    }
+
+    #entry-title {
+      margin-right: 10px;
+    }
+
+    #entry-date {
+      font-size: 0.7rem;
+      font-weight: 400;
+      color: #aaa;
+    }
+
+    .drag-toggle-btn {
+      position: absolute;
+      right: 0;
+      top: 0;
+      font-size: 0.9rem;
+      border: none;
+      background: none;
+      color: #999;
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    .drag-toggle-btn.active {
+      color: #0af;
     }
 
     .notes[contenteditable=true] {
@@ -282,6 +298,11 @@
       user-select: none;
       padding-top: 3px;
       flex-shrink: 0;
+      display: none;
+    }
+
+    .entry-line.drag-enabled .drag-handle {
+      display: inline-block;
     }
 
     .entry-line input[type=checkbox] {
@@ -321,6 +342,7 @@
       opacity: 0.5;
     }
 
+    /* MODALS will be styled below in Part 2 */
     #sync-status {
       position: fixed;
       bottom: 10px;
@@ -348,53 +370,36 @@
       display: inline-block;
     }
 
-    #hide-wrapper {
-      position: fixed;
-      bottom: 12px;
-      left: 12px;
-      font-size: 0.6rem;
-      color: #aaa;
-      background: none;
-      padding: 6px 10px;
-      border-radius: 6px;
-      z-index: 1000;
-      user-select: none;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    #hide-wrapper input {
-      transform: scale(1.2);
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
 
     @media (prefers-color-scheme: light) {
-      html, body { background: transparent; color: #000; }
+      html, body {
+        color: #000;
+      }
       .card, .panel, .notes, .popup-buttons button {
         border-color: #ccc;
-        background: none;
         color: #000;
       }
       .card h2, .icon-btn, .add-collection-link,
       #index-search, #collection-popup input {
         color: #111;
         border-color: #ccc;
-        background: none;
       }
       .card .item { color: #333; }
       .card .item.active { color: #000; font-weight: bold; }
-      .icon-btn:hover { color: #000; }
+      #calendar-btn { color: #000; border-color: #000; }
       #sync-status { color: #666; }
       .entry-line input[type="checkbox"] { border: 1px solid #000; }
       .entry-line input[type="checkbox"]:checked::after { color: #000; }
-      #hide-wrapper { color: #333; }
       #calendar-popup {
         background: #fff;
-        border-color: #999;
+        border-color: #aaa;
         color: #000;
       }
       #calendar-popup input[type="date"] {
-        border-color: #999;
+        border-color: #aaa;
         color: #000;
       }
       .calendar-day {
@@ -406,7 +411,6 @@
       }
       .calendar-today {
         border-color: #000;
-        font-weight: bold;
       }
     }
   </style>
@@ -420,6 +424,11 @@
         <div id="calendar-popup">
           <h3>DATE INPUT</h3>
           <p>PLEASE INPUT THE DATE YOU'D LIKE TO CREATE</p>
+          <div id="calendar-header">
+            <button id="prev-month">&#8592;</button>
+            <span id="calendar-month"></span>
+            <button id="next-month">&#8594;</button>
+          </div>
           <div id="calendar-grid"></div>
           <input type="date" id="calendar-input" />
         </div>
@@ -447,8 +456,9 @@
       <div class="header">
         <div style="display: flex; align-items: baseline;">
           <div id="entry-title">DAILY LOG</div>
-          <div id="entry-date">LOADING…</div>
+          <div id="entry-date"></div>
         </div>
+        <button class="drag-toggle-btn" id="dragToggleBtn" title="Toggle drag mode">✥</button>
       </div>
       <div id="journal-content" class="notes" contenteditable="true"></div>
     </div>
@@ -463,7 +473,7 @@
     <label><input type="checkbox" id="hide-completed" onchange="toggleCompleted()" /> HIDE COMPLETED</label>
   </div>
 
-  <!-- Rename popup (Notion-safe) -->
+  <!-- Rename modal -->
   <div id="rename-popup" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#111; color:#fff; padding:20px; border:1px solid #444; border-radius:10px; z-index:1002; width:260px; max-width:90vw;">
     <h3 style="font-size:0.75rem; margin:0 0 8px;">RENAME COLLECTION</h3>
     <input id="rename-input" placeholder="New name" style="width:100%; padding:6px; font-family:'IBM Plex Mono', monospace; background:none; border:1px solid #444; color:#fff; font-size:0.75rem; margin-bottom:10px;" />
@@ -473,7 +483,7 @@
     </div>
   </div>
 
-  <!-- Delete popup (Notion-safe) -->
+  <!-- Delete modal -->
   <div id="delete-popup" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#111; color:#fff; padding:20px; border:1px solid #444; border-radius:10px; z-index:1002; width:260px; max-width:90vw;">
     <h3 style="font-size:0.75rem; margin:0 0 8px;">DELETE COLLECTION</h3>
     <p style="font-size:0.65rem; margin-bottom:12px;">Are you sure you want to delete this collection?</p>
@@ -493,13 +503,19 @@ const collectionsListContainer = document.getElementById("collections-list");
 const renamePopup = document.getElementById("rename-popup");
 const deletePopup = document.getElementById("delete-popup");
 const renameInput = document.getElementById("rename-input");
+const dragToggleBtn = document.getElementById("dragToggleBtn");
+const calendarMonthLabel = document.getElementById("calendar-month");
+let dragMode = false;
 
 let currentMode = "daily";
 let currentSlug = new Date().toISOString().slice(0, 10);
 let collectionsList = [];
 let undoStack = [], redoStack = [];
+
 let renameTargetSlug = "";
 let deleteTargetSlug = "";
+
+let calendarDate = new Date();
 
 function updateStatus(text, isSyncing = false) {
   const label = document.querySelector("#sync-status .label");
@@ -552,28 +568,31 @@ function restoreFromCache() {
 }
 
 function ensureVisibleContent() {
-  if (content.innerHTML.trim() === "") {
-    const div = document.createElement("div");
-    div.className = "entry-line";
+  if (content.innerHTML.trim() === "") addEntryLine("Start writing...");
+}
 
-    const handle = document.createElement("div");
-    handle.className = "drag-handle";
-    handle.innerHTML = "☰";
+function addEntryLine(text = "") {
+  const div = document.createElement("div");
+  div.className = "entry-line";
+  if (dragMode) div.classList.add("drag-enabled");
 
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.addEventListener("change", debounceSave);
+  const handle = document.createElement("div");
+  handle.className = "drag-handle";
+  handle.innerHTML = "☰";
 
-    const text = document.createElement("div");
-    text.className = "line-text";
-    text.contentEditable = true;
-    text.innerHTML = "Start writing...";
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.addEventListener("change", debounceSave);
 
-    div.appendChild(handle);
-    div.appendChild(checkbox);
-    div.appendChild(text);
-    content.appendChild(div);
-  }
+  const textDiv = document.createElement("div");
+  textDiv.className = "line-text";
+  textDiv.contentEditable = true;
+  textDiv.innerHTML = text || "&nbsp;";
+
+  div.appendChild(handle);
+  div.appendChild(checkbox);
+  div.appendChild(textDiv);
+  content.appendChild(div);
 }
 
 function formatPrettyDate(dateStr) {
@@ -654,7 +673,7 @@ function createCollection() {
   if (!collectionsList.includes(slug)) {
     collectionsList.push(slug);
     saveCollectionsIndex();
-    loadCollectionsList();
+    renderCollectionItem(slug);
   }
   nameInput.value = "";
   toggleCollectionPopup();
@@ -760,20 +779,20 @@ function filterIndex() {
   });
 }
 
-function buildCalendarGrid() {
-  const today = new Date();
-  const currentMonth = today.getMonth();
-  const first = new Date(today.getFullYear(), currentMonth, 1);
-  const daysInMonth = new Date(today.getFullYear(), currentMonth + 1, 0).getDate();
-
+function buildCalendarGrid(monthDate) {
   calendarGrid.innerHTML = "";
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  calendarMonthLabel.innerText = monthDate.toLocaleString("default", { month: "long", year: "numeric" }).toUpperCase();
+
   for (let i = 1; i <= daysInMonth; i++) {
-    const d = new Date(today.getFullYear(), currentMonth, i);
+    const d = new Date(year, month, i);
     const slug = d.toISOString().slice(0, 10);
     const el = document.createElement("div");
     el.className = "calendar-day";
     el.innerText = i;
-    if (i === today.getDate()) el.classList.add("calendar-today");
+    if (slug === new Date().toISOString().slice(0, 10)) el.classList.add("calendar-today");
     el.onclick = () => {
       loadSyncedContent(slug);
       calendarPopup.style.display = "none";
@@ -782,7 +801,36 @@ function buildCalendarGrid() {
   }
 }
 
-// DRAG SUPPORT FOR ENTRY LINE
+document.getElementById("calendar-btn").addEventListener("click", () => {
+  calendarPopup.style.display = calendarPopup.style.display === "block" ? "none" : "block";
+  buildCalendarGrid(calendarDate);
+});
+
+calendarInput.addEventListener("change", e => {
+  if (e.target.value) {
+    loadSyncedContent(e.target.value);
+    calendarPopup.style.display = "none";
+  }
+});
+
+document.getElementById("prev-month").onclick = () => {
+  calendarDate.setMonth(calendarDate.getMonth() - 1);
+  buildCalendarGrid(calendarDate);
+};
+
+document.getElementById("next-month").onclick = () => {
+  calendarDate.setMonth(calendarDate.getMonth() + 1);
+  buildCalendarGrid(calendarDate);
+};
+
+dragToggleBtn.onclick = () => {
+  dragMode = !dragMode;
+  dragToggleBtn.classList.toggle("active", dragMode);
+  document.querySelectorAll(".entry-line").forEach(el => {
+    el.classList.toggle("drag-enabled", dragMode);
+  });
+};
+
 new Sortable(content, {
   handle: ".drag-handle",
   draggable: ".entry-line",
@@ -790,10 +838,8 @@ new Sortable(content, {
   onEnd: debounceSave
 });
 
-// INPUT EVENTS
 content.addEventListener("input", debounceSave);
 content.addEventListener("change", debounceSave);
-
 content.addEventListener("keydown", e => {
   const isMac = navigator.platform.toUpperCase().includes("MAC");
   const meta = isMac ? e.metaKey : e.ctrlKey;
@@ -818,51 +864,19 @@ content.addEventListener("keydown", e => {
 
   if (e.key === "Enter") {
     e.preventDefault();
-    const div = document.createElement("div");
-    div.className = "entry-line";
-
-    const handle = document.createElement("div");
-    handle.className = "drag-handle";
-    handle.innerHTML = "☰";
-
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.addEventListener("change", debounceSave);
-
-    const text = document.createElement("div");
-    text.className = "line-text";
-    text.contentEditable = true;
-    text.innerHTML = "&nbsp;";
-
-    div.appendChild(handle);
-    div.appendChild(checkbox);
-    div.appendChild(text);
-    content.appendChild(div);
-
-    const sel = window.getSelection();
+    addEntryLine();
+    const lines = document.querySelectorAll(".entry-line .line-text");
+    const last = lines[lines.length - 1];
     const range = document.createRange();
-    range.setStart(text, 0);
+    const sel = window.getSelection();
+    range.setStart(last, 0);
     range.collapse(true);
     sel.removeAllRanges();
     sel.addRange(range);
-
     debounceSave();
   }
 });
 
-// INIT
-document.getElementById("calendar-btn").addEventListener("click", () => {
-  calendarPopup.style.display = calendarPopup.style.display === "block" ? "none" : "block";
-  buildCalendarGrid();
-});
-calendarInput.addEventListener("change", e => {
-  if (e.target.value) {
-    loadSyncedContent(e.target.value);
-    calendarPopup.style.display = "none";
-  }
-});
-
-// Set real TODAY/YESTERDAY/TOMORROW
 (function setRelativeIndexDates() {
   const today = new Date();
   const iso = d => d.toISOString().slice(0, 10);

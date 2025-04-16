@@ -189,137 +189,37 @@
       background: #222;
     }
 
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      font-size: 0.8rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      margin-bottom: 20px;
+    /* Calendar Enhancements */
+    #calendar-popup {
+      max-height: 90vh;
+      overflow: auto;
+      overflow-x: hidden;
+    }
+
+    #calendar-grid > div {
       position: relative;
     }
 
-    #entry-date {
-      font-size: 0.65rem;
-      color: #888;
-      font-weight: 400;
-      margin-top: 2px;
+    .calendar-today {
+      border: 2px solid #0af !important;
+      border-radius: 6px;
     }
 
-    .notes[contenteditable=true] {
-      outline: 0;
-      flex-grow: 1;
-      font-size: 0.85rem;
-      line-height: 1.9;
-      letter-spacing: 0.04em;
-      background: none;
-      overflow-y: auto;
-      height: calc(100vh - 160px);
-    }
-
-    .entry-line {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      margin-bottom: 12px;
-      cursor: grab;
-    }
-
-    .drag-handle {
-      font-size: 0.9rem;
-      cursor: grab;
-      user-select: none;
-      flex-shrink: 0;
-      display: none;
-      opacity: 0.5;
-    }
-
-    .entry-line.drag-enabled .drag-handle {
-      display: inline-block;
-    }
-
-    .entry-line input[type=checkbox] {
-      appearance: none;
-      width: 18px;
-      height: 18px;
-      border: 1px solid #eee;
-      background: none;
-      position: relative;
-      cursor: pointer;
-      margin-top: 4px;
-      border-radius: 4px;
-      flex-shrink: 0;
-    }
-
-    .entry-line input[type=checkbox]:checked::after {
-      content: "X";
-      font-size: 16px;
+    .calendar-entry-dot::after {
+      content: '';
+      display: block;
+      width: 4px;
+      height: 4px;
+      background: #0af;
+      border-radius: 50%;
       position: absolute;
-      top: -1px;
-      left: 3px;
-      color: #eee;
-    }
-
-    .entry-line .line-text {
-      flex-grow: 1;
-      white-space: pre-wrap;
-      word-break: break-word;
-      outline: none;
-      line-height: 1.8;
-      min-height: 24px;
-    }
-
-    .entry-line input[type=checkbox]:checked ~ .line-text {
-      text-decoration: line-through;
-      opacity: 0.5;
-    }
-
-    .drag-toggle-btn {
-      position: absolute;
-      right: 0;
-      top: 0;
-      font-size: 1.1rem;
-      background: none;
-      border: none;
-      color: #999;
-      cursor: pointer;
-      padding: 4px;
-    }
-
-    .drag-toggle-btn.active {
-      color: #0af;
-    }
-
-    #sync-status {
-      position: fixed;
-      bottom: 10px;
+      bottom: 4px;
       left: 50%;
       transform: translateX(-50%);
-      font-size: 0.6rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: #999;
-      font-weight: 500;
-      pointer-events: none;
-      z-index: 1000;
-      display: flex;
-      align-items: center;
-      gap: 6px;
     }
 
-    #sync-status .spinner {
-      width: 10px;
-      height: 10px;
-      border: 1.5px solid #888;
-      border-top: 1.5px solid transparent;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      display: inline-block;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
+    .calendar-selected {
+      background: #333;
     }
 
     @media (prefers-color-scheme: light) {
@@ -346,8 +246,12 @@
         background: none;
       }
       .drag-toggle-btn, #calendar-btn { color: #000; }
-      .entry-line input[type="checkbox"] { border-color: #000; }
-      .entry-line input[type="checkbox"]:checked::after { color: #000; }
+      .calendar-today {
+        border: 2px solid #00f !important;
+      }
+      .calendar-entry-dot::after {
+        background: #00f;
+      }
     }
   </style>
 </head>
@@ -391,30 +295,7 @@
       <div id="journal-content" class="notes" contenteditable="true"></div>
     </div>
   </div>
-
-  <div id="sync-status">
-    <span class="spinner" style="display:none;"></span>
-    <span class="label">SYNCED</span>
-  </div>
-
-  <div id="rename-popup" class="popup" style="display:none;">
-    <h3>RENAME COLLECTION</h3>
-    <input id="rename-input" placeholder="New name" />
-    <div class="popup-buttons">
-      <button onclick="confirmRename()">SAVE</button>
-      <button onclick="hideRenamePopup()">CANCEL</button>
-    </div>
-  </div>
-
-  <div id="delete-popup" class="popup" style="display:none;">
-    <h3>DELETE COLLECTION</h3>
-    <p>ARE YOU SURE YOU WANT TO DELETE THIS COLLECTION?</p>
-    <div class="popup-buttons">
-      <button onclick="confirmDelete()">DELETE</button>
-      <button onclick="hideDeletePopup()">CANCEL</button>
-    </div>
-  </div>
-
+  <!-- Calendar Popup -->
   <div id="calendar-popup" class="popup" style="display:none;">
     <h3>DATE INPUT</h3>
     <p>PLEASE SELECT A DATE TO CREATE OR LOAD</p>
@@ -429,430 +310,456 @@
       <button onclick="calendarPopup.style.display='none'">CANCEL</button>
     </div>
   </div>
-<script>
-const content = document.getElementById("journal-content");
-const title = document.getElementById("entry-title");
-const dateLabel = document.getElementById("entry-date");
-const calendarPopup = document.getElementById("calendar-popup");
-const calendarGrid = document.getElementById("calendar-grid");
-const calendarMonthLabel = document.getElementById("calendar-month");
-const calendarCreateBtn = document.getElementById("calendar-create");
 
-let currentMode = "daily";
-let currentSlug = new Date().toISOString().slice(0, 10);
-let recentEntries = [];
-let dragMode = false;
-let selectedCalendarDate = null;
-let calendarDate = new Date();
+  <!-- Rename Collection -->
+  <div id="rename-popup" class="popup" style="display:none;">
+    <h3>RENAME COLLECTION</h3>
+    <input id="rename-input" placeholder="New name" />
+    <div class="popup-buttons">
+      <button onclick="confirmRename()">SAVE</button>
+      <button onclick="hideRenamePopup()">CANCEL</button>
+    </div>
+  </div>
 
-function getKey(mode, slug) {
-  return `bujocache-${mode}-${slug}`;
-}
-function encodeHTML(str) {
-  return btoa(unescape(encodeURIComponent(str)));
-}
-function decodeHTML(str) {
-  return decodeURIComponent(escape(atob(str)));
-}
-function extractVersion(html) {
-  const match = html.match(/<!-- version:(.*?)-->/);
-  return match ? new Date(match[1]) : new Date(0);
-}
-function updateStatus(text, syncing = false) {
-  document.querySelector("#sync-status .label").textContent = text;
-  document.querySelector("#sync-status .spinner").style.display = syncing ? "inline-block" : "none";
-}
-function forceCheckboxAttrs() {
-  content.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-    cb.checked ? cb.setAttribute("checked", "checked") : cb.removeAttribute("checked");
-  });
-}
-function saveLocal() {
-  const html = `<!-- version:${new Date().toISOString()} -->\n${content.innerHTML}`;
-  localStorage.setItem(getKey(currentMode, currentSlug), encodeHTML(html));
-}
-function syncRemote() {
-  const html = `<!-- version:${new Date().toISOString()} -->\n${content.innerHTML}`;
-  updateStatus("SYNCING...", true);
-  fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ date: currentSlug, content: encodeHTML(html), mode: currentMode })
-  }).then(res => updateStatus(res.ok ? "SYNCED" : "NETLIFY ERROR"))
-    .catch(() => updateStatus("SYNC FAILED"));
-}
-function debounceSync() {
-  clearTimeout(window._syncTimeout);
-  window._syncTimeout = setTimeout(syncRemote, 1000);
-}
-function saveContent() {
-  forceCheckboxAttrs();
-  saveLocal();
-  debounceSync();
-}
-function formatPrettyDate(dateStr) {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }).toUpperCase();
-}
-function ensureEditableLine() {
-  if (content.innerHTML.trim() === "") addEntryLine("Start writing...");
-}
-function addEntryLine(text = "") {
-  const div = document.createElement("div");
-  div.className = "entry-line";
-  if (dragMode) div.classList.add("drag-enabled");
+  <!-- Delete Collection -->
+  <div id="delete-popup" class="popup" style="display:none;">
+    <h3>DELETE COLLECTION</h3>
+    <p>ARE YOU SURE YOU WANT TO DELETE THIS COLLECTION?</p>
+    <div class="popup-buttons">
+      <button onclick="confirmDelete()">DELETE</button>
+      <button onclick="hideDeletePopup()">CANCEL</button>
+    </div>
+  </div>
 
-  const drag = document.createElement("div");
-  drag.className = "drag-handle";
-  drag.textContent = "☰";
+  <!-- Sync status footer -->
+  <div id="sync-status">
+    <span class="spinner" style="display:none;"></span>
+    <span class="label">SYNCED</span>
+  </div>
 
-  const cb = document.createElement("input");
-  cb.type = "checkbox";
-  cb.onchange = saveContent;
+  <script>
+  const content = document.getElementById("journal-content");
+  const title = document.getElementById("entry-title");
+  const dateLabel = document.getElementById("entry-date");
+  const calendarPopup = document.getElementById("calendar-popup");
+  const calendarGrid = document.getElementById("calendar-grid");
+  const calendarMonthLabel = document.getElementById("calendar-month");
+  const calendarCreateBtn = document.getElementById("calendar-create");
 
-  const txt = document.createElement("div");
-  txt.className = "line-text";
-  txt.contentEditable = !dragMode;
-  txt.innerHTML = text;
+  let currentMode = "daily";
+  let currentSlug = new Date().toISOString().slice(0, 10);
+  let recentEntries = [];
+  let dragMode = false;
+  let selectedCalendarDate = null;
+  let calendarDate = new Date();
 
-  div.appendChild(drag);
-  div.appendChild(cb);
-  div.appendChild(txt);
-  content.appendChild(div);
-}
-function highlightActive(slug) {
-  document.querySelectorAll(".item").forEach(i => i.classList.remove("active"));
-  const el = document.querySelector(`.item[data-entry="${slug}"]`);
-  if (el) el.classList.add("active");
-}
-function loadContent(mode, slug, label, url) {
-  currentMode = mode;
-  currentSlug = slug;
-  title.textContent = label;
-  dateLabel.textContent = (mode === "daily") ? formatPrettyDate(slug) : "";
-  highlightActive(slug);
-
-  const today = new Date().toISOString().slice(0, 10);
-  const yest = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-  const tomo = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
-
-  if (![today, yest, tomo].includes(slug)) {
-    recentEntries = [slug, ...recentEntries.filter(s => s !== slug && ![today, yest, tomo].includes(s))].slice(0, 2);
-    localStorage.setItem("recent-entries", JSON.stringify(recentEntries));
-    renderRecents();
+  function getKey(mode, slug) {
+    return `bujocache-${mode}-${slug}`;
   }
 
-  const cached = localStorage.getItem(getKey(mode, slug));
-  const cachedHtml = cached ? decodeHTML(cached) : "";
-  const cachedVer = extractVersion(cachedHtml);
-  content.innerHTML = cachedHtml.replace(/<!--.*?-->/, "") || "";
-  ensureEditableLine();
-  updateStatus(cached ? "LOADED CACHED" : "EMPTY");
-
-  fetch(url).then(res => res.ok ? res.text() : null).then(remote => {
-    if (!remote) return;
-    const remoteVer = extractVersion(remote);
-    if (remoteVer > cachedVer) {
-      content.innerHTML = remote.replace(/<!--.*?-->/, "");
-      localStorage.setItem(getKey(mode, slug), encodeHTML(remote));
-      updateStatus("LOADED SYNCED");
-    }
-  }).catch(() => updateStatus("OFFLINE"));
-}
-function renderRecents() {
-  const box = document.getElementById("recent-entries");
-  box.innerHTML = "";
-  const today = new Date().toISOString().slice(0, 10);
-  const yest = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-  const tomo = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
-  recentEntries.filter(slug => ![today, yest, tomo].includes(slug)).forEach(slug => {
-    const div = document.createElement("div");
-    div.className = "item";
-    div.dataset.entry = slug;
-    div.textContent = slug;
-    div.onclick = () => loadContent("daily", slug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${slug}.html`);
-    box.appendChild(div);
-  });
-}
-
-// === Calendar Logic ===
-function renderCalendar() {
-  const year = calendarDate.getFullYear();
-  const month = calendarDate.getMonth();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  calendarMonthLabel.textContent = new Date(year, month).toLocaleString("default", { month: "long", year: "numeric" }).toUpperCase();
-  calendarGrid.innerHTML = "";
-
-  const firstDay = new Date(year, month, 1).getDay();
-  for (let i = 0; i < firstDay; i++) {
-    calendarGrid.appendChild(document.createElement("div"));
+  function encodeHTML(str) {
+    return btoa(unescape(encodeURIComponent(str)));
   }
 
-  for (let d = 1; d <= daysInMonth; d++) {
-    const cell = document.createElement("div");
-    cell.textContent = d;
-    cell.style.textAlign = "center";
-    cell.style.padding = "6px";
-    cell.style.border = "1px solid #444";
-    cell.style.cursor = "pointer";
-    const slug = new Date(year, month, d).toISOString().slice(0, 10);
-    cell.onclick = () => {
-      selectedCalendarDate = slug;
-      calendarCreateBtn.disabled = false;
-      document.querySelectorAll("#calendar-grid div").forEach(c => c.style.background = "");
-      cell.style.background = "#333";
-    };
-    calendarGrid.appendChild(cell);
+  function decodeHTML(str) {
+    return decodeURIComponent(escape(atob(str)));
   }
-}
-document.getElementById("calendar-btn").onclick = () => {
-  calendarPopup.style.display = "flex";
-  renderCalendar();
-};
-document.getElementById("prev-month").onclick = () => {
-  calendarDate.setMonth(calendarDate.getMonth() - 1);
-  renderCalendar();
-};
-document.getElementById("next-month").onclick = () => {
-  calendarDate.setMonth(calendarDate.getMonth() + 1);
-  renderCalendar();
-};
-calendarCreateBtn.onclick = () => {
-  if (!selectedCalendarDate) return;
-  const slug = selectedCalendarDate;
-  calendarPopup.style.display = "none";
-  loadContent("daily", slug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${slug}.html`);
-};
 
-// === Collections ===
-function toggleCollectionPopup() {
-  const popup = document.getElementById("collection-popup");
-  popup.style.display = popup.style.display === "none" ? "flex" : "none";
-}
-function createCollection() {
-  const input = document.getElementById("new-collection-name");
-  const name = input.value.trim().toUpperCase().replace(/\s+/g, "-");
-  if (!name) return;
-  const html = `<!-- version:${new Date().toISOString()} -->\n<div class="entry-line"><div class="drag-handle">☰</div><input type="checkbox"><div class="line-text">New collection: ${name}</div></div>`;
-  fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ date: name, content: encodeHTML(html), mode: "collection" })
-  }).then(() => {
-    toggleCollectionPopup();
-    input.value = "";
-    loadCollectionsList();
-  });
-}
-function confirmRename() {
-  const newName = document.getElementById("rename-input").value.trim().toUpperCase().replace(/\s+/g, "-");
-  if (!newName || !window._renameTarget) return;
-  fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ rename: window._renameTarget, to: newName, mode: "collection" })
-  }).then(() => {
-    hideRenamePopup();
-    loadCollectionsList();
-  });
-}
-function hideRenamePopup() {
-  document.getElementById("rename-popup").style.display = "none";
-}
-function confirmDelete() {
-  if (!window._deleteTarget) return;
-  fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ delete: window._deleteTarget, mode: "collection" })
-  }).then(() => {
-    hideDeletePopup();
-    loadCollectionsList();
-  });
-}
-function hideDeletePopup() {
-  document.getElementById("delete-popup").style.display = "none";
-}
-function loadCollectionsList() {
-  fetch("https://api.github.com/repos/lebron1212/bulletjournal/contents/collections")
-    .then(res => res.json())
-    .then(data => {
-      const box = document.getElementById("collections-list");
-      box.innerHTML = "";
-      data.filter(i => i.name.endsWith(".html")).forEach(item => {
-        const slug = item.name.replace(".html", "");
-        const div = document.createElement("div");
-        div.className = "item";
-        div.dataset.entry = slug;
-        div.textContent = slug;
-        div.onclick = () => loadContent("collection", slug, slug, `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/collections/${slug}.html`);
+  function extractVersion(html) {
+    const match = html.match(/<!-- version:(.*?)-->/);
+    return match ? new Date(match[1]) : new Date(0);
+  }
 
-        const ctrl = document.createElement("div");
-        ctrl.className = "item-controls";
-        const rename = document.createElement("button");
-        rename.className = "icon-btn";
-        rename.innerText = "✎";
-        rename.onclick = e => {
-          e.stopPropagation();
-          window._renameTarget = slug;
-          document.getElementById("rename-popup").style.display = "flex";
-          document.getElementById("rename-input").value = slug;
-        };
-        const del = document.createElement("button");
-        del.className = "icon-btn";
-        del.innerText = "✕";
-        del.onclick = e => {
-          e.stopPropagation();
-          window._deleteTarget = slug;
-          document.getElementById("delete-popup").style.display = "flex";
-        };
-        ctrl.appendChild(rename);
-        ctrl.appendChild(del);
-        div.appendChild(ctrl);
-        box.appendChild(div);
-      });
+  function updateStatus(text, syncing = false) {
+    document.querySelector("#sync-status .label").textContent = text;
+    document.querySelector("#sync-status .spinner").style.display = syncing ? "inline-block" : "none";
+  }
+
+  function forceCheckboxAttrs() {
+    content.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      cb.checked ? cb.setAttribute("checked", "checked") : cb.removeAttribute("checked");
     });
-}
+  }
 
-// === Other logic
-document.getElementById("recents-toggle").onclick = () => {
-  const box = document.getElementById("recent-entries");
-  const isOpen = box.style.display !== "none";
-  box.style.display = isOpen ? "none" : "block";
-  document.getElementById("recents-toggle").textContent = isOpen ? "▶" : "▼";
-};
+  function saveLocal() {
+    const html = `<!-- version:${new Date().toISOString()} -->\n${content.innerHTML}`;
+    localStorage.setItem(getKey(currentMode, currentSlug), encodeHTML(html));
+  }
 
-["today", "yesterday", "tomorrow"].forEach(key => {
-  document.querySelector(`[data-entry="${key}"]`).onclick = () => {
-    const offset = key === "yesterday" ? -1 : key === "tomorrow" ? 1 : 0;
-    const d = new Date();
-    d.setDate(d.getDate() + offset);
-    const slug = d.toISOString().slice(0, 10);
+  function syncRemote() {
+    const html = `<!-- version:${new Date().toISOString()} -->\n${content.innerHTML}`;
+    updateStatus("SYNCING...", true);
+    fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ date: currentSlug, content: encodeHTML(html), mode: currentMode })
+    }).then(res => updateStatus(res.ok ? "SYNCED" : "NETLIFY ERROR"))
+      .catch(() => updateStatus("SYNC FAILED"));
+  }
+
+  function debounceSync() {
+    clearTimeout(window._syncTimeout);
+    window._syncTimeout = setTimeout(syncRemote, 1000);
+  }
+
+  function saveContent() {
+    forceCheckboxAttrs();
+    saveLocal();
+    debounceSync();
+  }
+
+  function formatPrettyDate(dateStr) {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }).toUpperCase();
+  }
+
+  function ensureEditableLine() {
+    if (content.innerHTML.trim() === "") addEntryLine("Start writing...");
+  }
+
+  function addEntryLine(text = "") {
+    const div = document.createElement("div");
+    div.className = "entry-line";
+    if (dragMode) div.classList.add("drag-enabled");
+
+    const drag = document.createElement("div");
+    drag.className = "drag-handle";
+    drag.textContent = "☰";
+
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.onchange = saveContent;
+
+    const txt = document.createElement("div");
+    txt.className = "line-text";
+    txt.contentEditable = !dragMode;
+    txt.innerHTML = text;
+
+    div.appendChild(drag);
+    div.appendChild(cb);
+    div.appendChild(txt);
+    content.appendChild(div);
+  }
+  function highlightActive(slug) {
+    document.querySelectorAll(".item").forEach(i => {
+      const isMatch = i.dataset.entry === slug;
+      i.classList.toggle("active", isMatch);
+    });
+  }
+
+  function loadContent(mode, slug, label, url) {
+    currentMode = mode;
+    currentSlug = slug;
+    title.textContent = label;
+    dateLabel.textContent = (mode === "daily") ? formatPrettyDate(slug) : "";
+    highlightActive(slug);
+
+    const today = getTodaySlug();
+    const yest = getTodaySlug(-1);
+    const tomo = getTodaySlug(1);
+
+    if (![today, yest, tomo].includes(slug)) {
+      recentEntries = [slug, ...recentEntries.filter(s => s !== slug && ![today, yest, tomo].includes(s))].slice(0, 2);
+      localStorage.setItem("recent-entries", JSON.stringify(recentEntries));
+      renderRecents();
+    }
+
+    const cached = localStorage.getItem(getKey(mode, slug));
+    const cachedHtml = cached ? decodeHTML(cached) : "";
+    const cachedVer = extractVersion(cachedHtml);
+    content.innerHTML = cachedHtml.replace(/<!--.*?-->/, "") || "";
+    ensureEditableLine();
+    updateStatus(cached ? "LOADED CACHED" : "EMPTY");
+
+    fetch(url).then(res => res.ok ? res.text() : null).then(remote => {
+      if (!remote) return;
+      const remoteVer = extractVersion(remote);
+      if (remoteVer > cachedVer) {
+        content.innerHTML = remote.replace(/<!--.*?-->/, "");
+        localStorage.setItem(getKey(mode, slug), encodeHTML(remote));
+        updateStatus("LOADED SYNCED");
+      }
+    }).catch(() => updateStatus("OFFLINE"));
+  }
+
+  function renderRecents() {
+    const box = document.getElementById("recent-entries");
+    box.innerHTML = "";
+    const today = getTodaySlug();
+    const yest = getTodaySlug(-1);
+    const tomo = getTodaySlug(1);
+    recentEntries.filter(slug => ![today, yest, tomo].includes(slug)).forEach(slug => {
+      const div = document.createElement("div");
+      div.className = "item";
+      div.dataset.entry = slug;
+      div.textContent = slug;
+      div.onclick = () => loadContent("daily", slug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${slug}.html`);
+      box.appendChild(div);
+    });
+  }
+
+  function getExistingJournalSlugs() {
+    const slugs = [];
+    for (let k in localStorage) {
+      if (k.startsWith("bujocache-daily-")) {
+        slugs.push(k.replace("bujocache-daily-", ""));
+      }
+    }
+    return slugs;
+  }
+
+  function renderCalendar() {
+    const year = calendarDate.getFullYear();
+    const month = calendarDate.getMonth();
+    const todaySlug = getTodaySlug();
+    const existingSlugs = getExistingJournalSlugs();
+
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    calendarMonthLabel.textContent = new Date(year, month).toLocaleString("default", { month: "long", year: "numeric" }).toUpperCase();
+    calendarGrid.innerHTML = "";
+
+    const firstDay = new Date(year, month, 1).getDay();
+    for (let i = 0; i < firstDay; i++) {
+      calendarGrid.appendChild(document.createElement("div"));
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const cell = document.createElement("div");
+      cell.textContent = d;
+      cell.style.textAlign = "center";
+      cell.style.padding = "6px";
+      cell.style.border = "1px solid #444";
+      cell.style.cursor = "pointer";
+      const slug = new Date(year, month, d).toISOString().slice(0, 10);
+
+      if (slug === todaySlug) cell.classList.add("calendar-today");
+      if (existingSlugs.includes(slug)) cell.classList.add("calendar-entry-dot");
+
+      cell.onclick = () => {
+        selectedCalendarDate = slug;
+        calendarCreateBtn.disabled = false;
+        document.querySelectorAll("#calendar-grid div").forEach(c => c.classList.remove("calendar-selected"));
+        cell.classList.add("calendar-selected");
+      };
+      calendarGrid.appendChild(cell);
+    }
+  }
+
+  document.getElementById("calendar-btn").onclick = () => {
+    calendarPopup.style.display = "flex";
+    renderCalendar();
+  };
+  document.getElementById("prev-month").onclick = () => {
+    calendarDate.setMonth(calendarDate.getMonth() - 1);
+    renderCalendar();
+  };
+  document.getElementById("next-month").onclick = () => {
+    calendarDate.setMonth(calendarDate.getMonth() + 1);
+    renderCalendar();
+  };
+  calendarCreateBtn.onclick = () => {
+    if (!selectedCalendarDate) return;
+    const slug = selectedCalendarDate;
+    calendarPopup.style.display = "none";
     loadContent("daily", slug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${slug}.html`);
   };
-});
+  // === Undo / Redo
+  let undoStack = [], redoStack = [];
 
-document.getElementById("dragToggleBtn").onclick = () => {
-  dragMode = !dragMode;
-  document.getElementById("dragToggleBtn").classList.toggle("active", dragMode);
-  document.querySelectorAll(".entry-line").forEach(line => {
-    line.classList.toggle("drag-enabled", dragMode);
-    const txt = line.querySelector(".line-text");
-    if (txt) txt.contentEditable = !dragMode;
-  });
-};
+  function captureSnapshot() {
+    const snapshot = content.innerHTML;
+    undoStack.push(snapshot);
+    redoStack = []; // clear redo history
+  }
 
-new Sortable(content, {
-  handle: ".drag-handle",
-  animation: 150,
-  draggable: ".entry-line",
-  ghostClass: "sortable-ghost",
-  onEnd: () => saveContent()
-});
-
-content.addEventListener("input", saveContent);
-content.addEventListener("change", saveContent);
-
-document.addEventListener("keydown", e => {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    addEntryLine("&nbsp;");
-    const last = content.querySelector(".entry-line:last-child .line-text");
-    if (last) {
-      const range = document.createRange();
-      range.selectNodeContents(last);
-      range.collapse(false);
-      const sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(range);
-      last.focus();
-    }
+  function applySnapshot(snapshot) {
+    if (!snapshot) return;
+    content.innerHTML = snapshot;
+    forceCheckboxAttrs();
     saveContent();
   }
-});
 
-  function highlightActive(slug) {
-  document.querySelectorAll(".item").forEach(i => {
-    i.classList.remove("active");
-    if (i.dataset.entry === slug) {
-      i.classList.add("active");
+  document.addEventListener("keydown", e => {
+    if (e.metaKey || e.ctrlKey) {
+      if (e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        const snap = undoStack.pop();
+        if (snap) {
+          redoStack.push(content.innerHTML);
+          applySnapshot(snap);
+        }
+      } else if ((e.key === "Z" && e.shiftKey) || e.key === "y") {
+        e.preventDefault();
+        const snap = redoStack.pop();
+        if (snap) {
+          undoStack.push(content.innerHTML);
+          applySnapshot(snap);
+        }
+      }
     }
   });
-}
 
-function loadCollectionsList() {
-  fetch("https://api.github.com/repos/lebron1212/bulletjournal/contents/collections")
-    .then(res => res.json())
-    .then(data => {
-      const box = document.getElementById("collections-list");
-      box.innerHTML = "";
-      data.filter(i => i.name.endsWith(".html")).forEach(item => {
-        const rawName = item.name.replace(".html", "");
-        const slug = rawName.replace(/^collection-/, "");
-        const div = document.createElement("div");
-        div.className = "item";
-        div.dataset.entry = slug;
-        div.textContent = slug;
+  content.addEventListener("input", () => {
+    captureSnapshot();
+    saveContent();
+  });
 
-        const ctrl = document.createElement("div");
-        ctrl.className = "item-controls";
-
-        const rename = document.createElement("button");
-        rename.className = "icon-btn";
-        rename.innerText = "✎";
-        rename.onclick = e => {
-          e.stopPropagation();
-          window._renameTarget = slug;
-          document.getElementById("rename-input").value = slug;
-          document.getElementById("rename-popup").style.display = "flex";
-        };
-
-        const del = document.createElement("button");
-        del.className = "icon-btn";
-        del.innerText = "✕";
-        del.onclick = e => {
-          e.stopPropagation();
-          window._deleteTarget = slug;
-          document.getElementById("delete-popup").style.display = "flex";
-        };
-
-        ctrl.appendChild(rename);
-        ctrl.appendChild(del);
-        div.appendChild(ctrl);
-
-        div.onclick = () => {
-          loadContent("collection", slug, slug, `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/collections/collection-${slug}.html`);
-        };
-
-        box.appendChild(div);
-      });
+  // === Drag & Sort
+  document.getElementById("dragToggleBtn").onclick = () => {
+    dragMode = !dragMode;
+    document.getElementById("dragToggleBtn").classList.toggle("active", dragMode);
+    document.querySelectorAll(".entry-line").forEach(line => {
+      line.classList.toggle("drag-enabled", dragMode);
+      const txt = line.querySelector(".line-text");
+      if (txt) txt.contentEditable = !dragMode;
+      const dragIcon = line.querySelector(".drag-handle");
+      if (dragIcon) dragIcon.style.display = dragMode ? "inline-block" : "none";
     });
-}
+  };
 
-document.getElementById("dragToggleBtn").onclick = () => {
-  dragMode = !dragMode;
-  const btn = document.getElementById("dragToggleBtn");
-  btn.classList.toggle("active", dragMode);
-
-  const entryLines = document.querySelectorAll(".entry-line");
-  entryLines.forEach(line => {
-    line.classList.toggle("drag-enabled", dragMode);
-    const txt = line.querySelector(".line-text");
-    if (txt) txt.contentEditable = !dragMode;
-    const dragIcon = line.querySelector(".drag-handle");
-    if (dragIcon) {
-      dragIcon.style.display = dragMode ? "inline-block" : "none";
-    }
+  new Sortable(content, {
+    handle: ".drag-handle",
+    animation: 150,
+    draggable: ".entry-line",
+    ghostClass: "sortable-ghost",
+    onEnd: () => saveContent()
   });
-};
 
+  // === Collection Popups
+  function toggleCollectionPopup() {
+    const popup = document.getElementById("collection-popup");
+    popup.style.display = popup.style.display === "none" ? "flex" : "none";
+  }
 
-window.onload = () => {
-  const rec = localStorage.getItem("recent-entries");
-  recentEntries = rec ? JSON.parse(rec) : [];
-  renderRecents();
-  loadCollectionsList();
-  const slug = new Date().toISOString().slice(0, 10);
-  loadContent("daily", slug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${slug}.html`);
-};
-</script>
+  function createCollection() {
+    const input = document.getElementById("new-collection-name");
+    const name = input.value.trim().toUpperCase().replace(/\s+/g, "-");
+    if (!name) return;
+    const html = `<!-- version:${new Date().toISOString()} -->\n<div class="entry-line"><div class="drag-handle">☰</div><input type="checkbox"><div class="line-text">New collection: ${name}</div></div>`;
+    fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ date: name, content: encodeHTML(html), mode: "collection" })
+    }).then(() => {
+      toggleCollectionPopup();
+      input.value = "";
+      if (!cachedCollectionSlugs.includes(name)) {
+        cachedCollectionSlugs.unshift(name);
+        localStorage.setItem("collections-list", JSON.stringify(cachedCollectionSlugs));
+        renderCollections(cachedCollectionSlugs);
+      }
+    });
+  }
+
+  function confirmRename() {
+    const newName = document.getElementById("rename-input").value.trim().toUpperCase().replace(/\s+/g, "-");
+    if (!newName || !window._renameTarget) return;
+    fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rename: window._renameTarget, to: newName, mode: "collection" })
+    }).then(() => {
+      hideRenamePopup();
+      loadCollectionsList();
+    });
+  }
+
+  function confirmDelete() {
+    if (!window._deleteTarget) return;
+    fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ delete: window._deleteTarget, mode: "collection" })
+    }).then(() => {
+      hideDeletePopup();
+      loadCollectionsList();
+    });
+  }
+
+  function hideRenamePopup() {
+    document.getElementById("rename-popup").style.display = "none";
+  }
+
+  function hideDeletePopup() {
+    document.getElementById("delete-popup").style.display = "none";
+  }
+
+  let cachedCollectionSlugs = [];
+
+  function loadCollectionsList() {
+    const box = document.getElementById("collections-list");
+    box.innerHTML = "";
+
+    const stored = localStorage.getItem("collections-list");
+    if (stored) {
+      cachedCollectionSlugs = JSON.parse(stored);
+      renderCollections(cachedCollectionSlugs);
+    }
+
+    fetch("https://api.github.com/repos/lebron1212/bulletjournal/contents/journals/collections")
+      .then(res => res.ok ? res.json() : [])
+      .then(data => {
+        const slugs = data
+          .filter(i => i.name.startsWith("collection-") && i.name.endsWith(".html"))
+          .map(i => i.name.replace(".html", "").replace("collection-", ""));
+        cachedCollectionSlugs = slugs;
+        localStorage.setItem("collections-list", JSON.stringify(slugs));
+        renderCollections(slugs);
+      });
+  }
+
+  function renderCollections(slugs) {
+    const box = document.getElementById("collections-list");
+    box.innerHTML = "";
+    slugs.forEach(slug => {
+      const div = document.createElement("div");
+      div.className = "item";
+      div.dataset.entry = slug;
+      div.textContent = slug;
+
+      const ctrl = document.createElement("div");
+      ctrl.className = "item-controls";
+
+      const rename = document.createElement("button");
+      rename.className = "icon-btn";
+      rename.innerText = "✎";
+      rename.onclick = e => {
+        e.stopPropagation();
+        window._renameTarget = slug;
+        document.getElementById("rename-input").value = slug;
+        document.getElementById("rename-popup").style.display = "flex";
+      };
+
+      const del = document.createElement("button");
+      del.className = "icon-btn";
+      del.innerText = "✕";
+      del.onclick = e => {
+        e.stopPropagation();
+        window._deleteTarget = slug;
+        document.getElementById("delete-popup").style.display = "flex";
+      };
+
+      ctrl.appendChild(rename);
+      ctrl.appendChild(del);
+      div.appendChild(ctrl);
+
+      div.onclick = () => {
+        loadContent("collection", slug, slug, `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/collections/collection-${slug}.html`);
+      };
+
+      box.appendChild(div);
+    });
+  }
+
+  // === Final Init
+  window.onload = () => {
+    const rec = localStorage.getItem("recent-entries");
+    recentEntries = rec ? JSON.parse(rec) : [];
+    renderRecents();
+    loadCollectionsList();
+    const slug = getTodaySlug();
+    loadContent("daily", slug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${slug}.html`);
+  };
+  </script>
+</body>
+</html>

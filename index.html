@@ -642,6 +642,134 @@ calendarCreateBtn.onclick = () => {
   loadContent("daily", selectedCalendarDate, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${selectedCalendarDate}.html`);
 };
 
+  function toggleCollectionPopup() {
+  document.getElementById("collection-popup").style.display = "flex";
+}
+
+function hideRenamePopup() {
+  document.getElementById("rename-popup").style.display = "none";
+}
+
+function hideDeletePopup() {
+  document.getElementById("delete-popup").style.display = "none";
+}
+
+function createCollection() {
+  const input = document.getElementById("new-collection-name");
+  const name = input.value.trim().toUpperCase().replace(/\s+/g, "-");
+  if (!name) return;
+
+  const html = `<!-- version:${new Date().toISOString()} -->\n<div class="entry-line"><input type="checkbox"><div class="line-text">New collection: ${name}</div></div>`;
+
+  fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ date: name, content: encodeHTML(html), mode: "collection" })
+  }).then(() => {
+    input.value = "";
+    document.getElementById("collection-popup").style.display = "none";
+    const existing = JSON.parse(localStorage.getItem("collections-list") || "[]");
+    const updated = Array.from(new Set([name, ...existing]));
+    localStorage.setItem("collections-list", JSON.stringify(updated));
+    renderCollections(updated);
+  });
+}
+
+function confirmRename() {
+  const newName = document.getElementById("rename-input").value.trim().toUpperCase().replace(/\s+/g, "-");
+  if (!newName || !window._renameTarget) return;
+
+  fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ rename: window._renameTarget, to: newName, mode: "collection" })
+  }).then(() => {
+    hideRenamePopup();
+    const updated = JSON.parse(localStorage.getItem("collections-list") || "[]")
+      .map(s => s === window._renameTarget ? newName : s);
+    localStorage.setItem("collections-list", JSON.stringify(updated));
+    renderCollections(updated);
+  });
+}
+
+function confirmDelete() {
+  if (!window._deleteTarget) return;
+
+  fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ delete: window._deleteTarget, mode: "collection" })
+  }).then(() => {
+    hideDeletePopup();
+    const updated = JSON.parse(localStorage.getItem("collections-list") || "[]")
+      .filter(s => s !== window._deleteTarget);
+    localStorage.setItem("collections-list", JSON.stringify(updated));
+    renderCollections(updated);
+  });
+}
+
+function loadCollectionsList() {
+  const box = document.getElementById("collections-list");
+  const stored = localStorage.getItem("collections-list");
+  let slugs = stored ? JSON.parse(stored) : [];
+  renderCollections(slugs);
+
+  fetch("https://api.github.com/repos/lebron1212/bulletjournal/contents/journals/collections")
+    .then(res => res.ok ? res.json() : [])
+    .then(data => {
+      const remoteSlugs = data
+        .filter(i => i.name.startsWith("collection-") && i.name.endsWith(".html"))
+        .map(i => i.name.replace("collection-", "").replace(".html", ""));
+      localStorage.setItem("collections-list", JSON.stringify(remoteSlugs));
+      renderCollections(remoteSlugs);
+    });
+}
+
+function renderCollections(slugs) {
+  const box = document.getElementById("collections-list");
+  box.innerHTML = "";
+
+  const unique = Array.from(new Set(slugs));
+  unique.forEach(slug => {
+    const div = document.createElement("div");
+    div.className = "item";
+    div.dataset.entry = slug;
+    div.textContent = slug;
+
+    const ctrl = document.createElement("div");
+    ctrl.className = "item-controls";
+
+    const rename = document.createElement("button");
+    rename.className = "icon-btn";
+    rename.innerText = "✎";
+    rename.onclick = e => {
+      e.stopPropagation();
+      window._renameTarget = slug;
+      document.getElementById("rename-input").value = slug;
+      document.getElementById("rename-popup").style.display = "flex";
+    };
+
+    const del = document.createElement("button");
+    del.className = "icon-btn";
+    del.innerText = "✕";
+    del.onclick = e => {
+      e.stopPropagation();
+      window._deleteTarget = slug;
+      document.getElementById("delete-popup").style.display = "flex";
+    };
+
+    ctrl.appendChild(rename);
+    ctrl.appendChild(del);
+    div.appendChild(ctrl);
+
+    div.onclick = () => {
+      loadContent("collection", slug, slug, `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/collections/collection-${slug}.html`);
+    };
+
+    box.appendChild(div);
+  });
+}
+
 // INIT
 window.onload = () => {
   recentEntries = JSON.parse(localStorage.getItem("recent-entries") || "[]");

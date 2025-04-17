@@ -382,7 +382,8 @@
   background: #111;
   color: #fff;
   width: 260px;
-  max-width: 90vw;
+  max-width: 100%;
+  overflow: auto;
   padding: 10px;
   border-radius: 10px;
   border: 1px solid #555;
@@ -413,7 +414,7 @@
   font-size: 0.75rem;
 }
 
-}.command-option.active {
+.command-option.active {
   background: #444;
   color: #fff;
   font-weight: bold;
@@ -1022,36 +1023,39 @@ bindPopupKeys('delete-popup', confirmDelete, hideDeletePopup);
   const range = sel.getRangeAt(0);
   let node = range.startContainer;
 
-  // Normalize node and wrap if needed
-while (node && node.nodeType !== 1) node = node.parentNode;
-if (!node) return;
+  while (node && node.nodeType !== 1) node = node.parentNode;
+  if (!node) return;
 
-let parent = node.closest(".entry-line") || node;
+  let parent = node.closest(".entry-line");
 
-   if (e.key === "/" && !isCommandMode && !e.metaKey && !e.ctrlKey && !e.altKey) {
-  isCommandMode = true;
-  commandBuffer = "/";
-  window._targetBlock = parent;
-  console.log("🟢 Command mode activated at", parent);
-  openCommandPalette();
-  return;
-}
+  // 🛠 Fallback: force-wrap raw/empty lines
+  if (!parent) {
+    const wrapper = document.createElement("div");
+    wrapper.className = "line-text";
+    wrapper.contentEditable = true;
+    wrapper.innerHTML = "";
+    journalContent.appendChild(wrapper);
+    placeCaretAtStart(wrapper);
+    parent = wrapper;
+  }
 
-if (!node.classList.contains("line-text") && !parent.classList.contains("entry-line")) {
-  // Force wrap in .line-text if it's a raw empty div or unstyled line
-  const wrapper = document.createElement("div");
-  wrapper.className = "line-text";
-  wrapper.contentEditable = true;
-  wrapper.innerHTML = "";
-  journalContent.insertBefore(wrapper, node.nextSibling || null);
-  journalContent.removeChild(node);
-  parent = wrapper;
-}
-
+  // 🩹 Handle unwrapped junk nodes
+  if (!node.classList.contains("line-text") && !parent.classList.contains("entry-line")) {
+    const wrapper = document.createElement("div");
+    wrapper.className = "line-text";
+    wrapper.contentEditable = true;
+    wrapper.innerHTML = "";
+    journalContent.insertBefore(wrapper, node.nextSibling || null);
+    journalContent.removeChild(node);
+    parent = wrapper;
+  }
+   
    // Trigger command mode when typing `/`
 if (e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey) {
   isCommandMode = true;
   commandBuffer = "/";
+  window._targetBlock = parent; // ⬅️ set target so command applies correctly
+  openCommandPalette();
   return;
 }
 
@@ -1236,12 +1240,21 @@ const COMMANDS = [
 let paletteActive = false;
 let selectedIndex = 0;
 
-function openCommandPalette() {
+  function openCommandPalette() {
   const sel = window.getSelection();
   if (!sel.rangeCount) return;
 
   const range = sel.getRangeAt(0).cloneRange();
-  const rect = range.getBoundingClientRect();
+  let rect = range.getBoundingClientRect();
+
+  // Fallback for collapsed empty lines
+  if (rect.width === 0 && rect.height === 0) {
+    const span = document.createElement("span");
+    span.textContent = "\u200b"; // zero-width space
+    range.insertNode(span);
+    rect = span.getBoundingClientRect();
+    span.remove();
+  }
 
   const wrapper = document.getElementById("journal-wrapper");
   const wrapperRect = wrapper.getBoundingClientRect();
@@ -1249,10 +1262,8 @@ function openCommandPalette() {
   const palette = commandPalette;
   palette.style.display = "block";
 
-  // Position relative to journal-wrapper
   palette.style.left = `${rect.left - wrapperRect.left}px`;
-  palette.style.top = `${rect.bottom - wrapperRect.top}px`;
-
+  palette.style.top = `${rect.bottom - wrapperRect.top + 4}px`; // add small padding
   paletteActive = true;
   commandSearch.value = "";
   renderCommandOptions(COMMANDS);
@@ -1263,6 +1274,9 @@ function closeCommandPalette() {
   paletteActive = false;
   commandPalette.style.display = "none";
   selectedIndex = 0;
+
+  // ⤵ Refocus to journal content
+  journalContent.focus();
 }
 
 function renderCommandOptions(filtered) {
@@ -1355,6 +1369,19 @@ function applyCommand(cmd) {
     }
   });
 }
+  // Click outside command palette to close
+document.addEventListener("mousedown", (e) => {
+  if (paletteActive && !commandPalette.contains(e.target) && !e.target.closest(".entry-line")) {
+    closeCommandPalette();
+  }
+});
+
+// Escape key to close command palette globally
+document.addEventListener("keydown", (e) => {
+  if (paletteActive && e.key === "Escape") {
+    closeCommandPalette();
+  }
+});
 </script>
 </body>
 </html>

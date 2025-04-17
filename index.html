@@ -855,7 +855,7 @@ function createCollection() {
   const name = input.value.trim().toUpperCase().replace(/\s+/g, "-");
   if (!name) return;
 
-  const html = `<!-- version:${new Date().toISOString()} -->\n<div class="entry-line"><input type="checkbox"><div class="line-text" contenteditable="true">New collection: ${name}</div></div>`;
+  const html = `<!-- version:${new Date().toISOString()} -->\n<div class="line-text" contenteditable="true">New collection: ${name}</div>`;
 
   fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
     method: "POST",
@@ -1146,29 +1146,43 @@ bindPopupKeys('delete-popup', confirmDelete, hideDeletePopup);
     loadContent("daily", tomo, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${tomo}.html`);
 
   loadContent("daily", today, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${today}.html`);
+document.getElementById("journal-content").addEventListener("click", e => {
+  const content = document.getElementById("journal-content");
+  const target = e.target;
 
-  // Focus line-text on entry line click
-  document.getElementById("journal-content").addEventListener("click", e => {
-    const target = e.target.closest(".entry-line");
-    if (target && !e.target.classList.contains("line-text")) {
-      const text = target.querySelector(".line-text");
-      if (text) text.focus();
+  // ✅ If you clicked on a line, focus it like normal
+  const entry = target.closest(".entry-line");
+  if (entry && !target.classList.contains("line-text")) {
+    const text = entry.querySelector(".line-text");
+    if (text) text.focus();
+    return;
+  }
+
+  // ✅ If you clicked directly on a line-text, let default behavior continue
+  if (target.classList.contains("line-text")) return;
+
+  // ✅ If you clicked an <hr> (divider), add a new line after it
+  if (target.tagName === "HR") {
+    const newLine = createLineBlock("text", "");
+    content.insertBefore(newLine, target.nextSibling);
+    placeCaretAtStart(newLine);
+    saveContent();
+    return;
+  }
+
+  // ✅ If you clicked empty space in journal-content — append a new line
+  if (target === content || content.contains(target)) {
+    // Make sure you didn't click *on* something already
+    const isBlankClick = [...content.children].every(child => !child.contains(target));
+    if (isBlankClick) {
+      const newLine = createLineBlock("text", "");
+      content.appendChild(newLine);
+      placeCaretAtStart(newLine);
+      saveContent();
     }
-  });
-  normalizeJournalContent();
-  if (journalContent.childNodes.length === 0) {
-  const line = createLineBlock("text");
-  journalContent.appendChild(line);
-  placeCaretAtStart(line);
-}
-  if (journalContent.innerHTML.trim() === "") {
-  const line = document.createElement("div");
-  line.className = "line-text";
-  line.contentEditable = true;
-  line.innerHTML = "";
-  journalContent.appendChild(line);
-}
-};
+  }
+});
+
   const commandPalette = document.getElementById("command-palette");
 const commandSearch = document.getElementById("command-search");
 const commandOptionsBox = document.getElementById("command-options");

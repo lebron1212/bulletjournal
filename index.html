@@ -307,6 +307,17 @@
       html, body { color: #000; }
       .entry-line input[type="checkbox"]:checked + .line-text { color: #000; }
       .calendar-dot { border-bottom: 2px solid #000 !important; }
+
+      .popup-buttons button,
+  .icon-btn,
+  .add-collection-link,
+  #calendar-btn {
+    color: #000;
+    border-color: #000;
+  }
+
+  .popup-buttons button:hover {
+    background: #eee;
     }
 
     @media (prefers-color-scheme: dark) {
@@ -480,30 +491,61 @@ function makeAllLinesEditable() {
 
       txt.addEventListener("input", saveContent);
 
-      txt.addEventListener("keydown", e => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          e.stopPropagation();
-          const newLine = addEntryLine();
-          div.insertAdjacentElement("afterend", newLine);
-          newLine.querySelector(".line-text").focus();
-        }
+      let lastEnterTime = 0;
 
-        if (e.key === "Backspace" && txt.textContent.trim() === "") {
-          e.preventDefault();
-          div.remove();
-          saveContent();
-        }
+txt.addEventListener("keydown", e => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    e.stopPropagation();
 
-        if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "c") {
-          e.preventDefault();
-          const newLine = addEntryLine();
-          div.insertAdjacentElement("afterend", newLine);
-          newLine.querySelector(".line-text").focus();
-        }
-      });
+    const now = Date.now();
+    const timeDiff = now - lastEnterTime;
+    lastEnterTime = now;
+
+    const newDiv = document.createElement("div");
+    newDiv.className = "entry-line";
+
+    const newText = document.createElement("div");
+    newText.className = "line-text";
+    newText.contentEditable = true;
+
+    // Are we currently in a checkbox line?
+    const isCheckboxLine = div.querySelector("input[type='checkbox']");
+
+    if (isCheckboxLine && timeDiff < 400) {
+      // Double-ENTER: plain line
+      newDiv.appendChild(newText);
+    } else if (isCheckboxLine) {
+      // Single-ENTER in checkbox line: another checkbox line
+      const newCB = document.createElement("input");
+      newCB.type = "checkbox";
+      newCB.onchange = saveContent;
+      newDiv.appendChild(newCB);
+      newDiv.appendChild(newText);
+    } else {
+      // ENTER in a plain line = plain line
+      newDiv.appendChild(newText);
     }
-  });
+
+    div.insertAdjacentElement("afterend", newDiv);
+    makeAllLinesEditable(); // rebind events
+    newText.focus();
+    saveContent();
+  }
+
+  if (e.key === "Backspace" && txt.textContent.trim() === "") {
+    e.preventDefault();
+    div.remove();
+    saveContent();
+  }
+
+  if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "c") {
+    e.preventDefault();
+    const newLine = addEntryLine();
+    div.insertAdjacentElement("afterend", newLine);
+    newLine.querySelector(".line-text").focus();
+  }
+});
 }
 
 function smoothEntryTransition(newHtml) {
@@ -582,30 +624,6 @@ function addEntryLine(text = "") {
 
   // 🧠 Event: Save on input
   txt.addEventListener("input", saveContent);
-
-  // ⌨️ Event: Keydown handling
-  txt.addEventListener("keydown", e => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      e.stopPropagation();
-      const newLine = addEntryLine(); // ✅ this works now because addEntryLine is declared
-      div.insertAdjacentElement("afterend", newLine);
-      newLine.querySelector(".line-text").focus();
-    }
-
-    if (e.key === "Backspace" && txt.textContent.trim() === "") {
-      e.preventDefault();
-      div.remove();
-      saveContent();
-    }
-
-    if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "c") {
-      e.preventDefault();
-      const newLine = addEntryLine();
-      div.insertAdjacentElement("afterend", newLine);
-      newLine.querySelector(".line-text").focus();
-    }
-  });
 
   div.appendChild(cb);
   div.appendChild(txt);
@@ -812,13 +830,19 @@ function createCollection() {
   }).then(() => {
     input.value = "";
     document.getElementById("collection-popup").style.display = "none";
-    const existing = JSON.parse(localStorage.getItem("collections-list") || "[]");
+
+    const localKey = "collections-list";
+    const now = new Date().toISOString();
+
+    // Update cached list with version
+    const existing = JSON.parse(localStorage.getItem(localKey) || "[]");
     const updated = Array.from(new Set([name, ...existing]));
-    localStorage.setItem("collections-list", JSON.stringify(updated));
+
+    localStorage.setItem(localKey, JSON.stringify(updated));
+    localStorage.setItem(`${localKey}-version`, now); // 🔥 store version timestamp
     renderCollections(updated);
   });
 }
-
 function confirmRename() {
   const newName = document.getElementById("rename-input").value.trim().toUpperCase().replace(/\s+/g, "-");
   if (!newName || !window._renameTarget) return;
@@ -859,14 +883,23 @@ function loadCollectionsList() {
   renderCollections(slugs);
 
   fetch("https://api.github.com/repos/lebron1212/bulletjournal/contents/journals/collections")
-    .then(res => res.ok ? res.json() : [])
-    .then(data => {
-      const remoteSlugs = data
-        .filter(i => i.name.startsWith("collection-") && i.name.endsWith(".html"))
-        .map(i => i.name.replace("collection-", "").replace(".html", ""));
+  .then(res => res.ok ? res.json() : null)
+  .then(data => {
+    if (!data) return;
+
+    const remoteSlugs = data
+      .filter(i => i.name.startsWith("collection-") && i.name.endsWith(".html"))
+      .map(i => i.name.replace("collection-", "").replace(".html", ""));
+
+    const remoteVersion = new Date().toISOString();
+    const cachedVersion = localStorage.getItem("collections-list-version");
+
+    if (!cachedVersion || new Date(remoteVersion) > new Date(cachedVersion)) {
       localStorage.setItem("collections-list", JSON.stringify(remoteSlugs));
+      localStorage.setItem("collections-list-version", remoteVersion);
       renderCollections(remoteSlugs);
-    });
+    }
+  });
 }
 
 function renderCollections(slugs) {

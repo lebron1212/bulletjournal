@@ -43,13 +43,9 @@
       min-width: 0;
     }
 
-    b {
-  color: #000;
-}
-@media (prefers-color-scheme: dark) {
   b {
-    color: #fff;
-  }
+  color: inherit;
+  font-weight: bold;
 }
 
     .card {
@@ -337,7 +333,11 @@
   .popup-buttons button {
     background: #000;
     color: #fff;
-    border-color: #000;
+    border: 1px solid #fff;
+  }
+  
+    .item.active {
+    color: #000 !important; /* 👈 override white in light mode */
   }
 
   .popup-buttons button:hover {
@@ -396,7 +396,7 @@
           <div id="entry-date">MON, APR 14</div>
         </div>
       </div>
-      <div id="journal-content" class="notes"></div>
+      <div id="journal-content" class="notes" contenteditable="true" spellcheck="false"></div>
     </div>
   </div>
 
@@ -505,43 +505,6 @@ function formatPrettyDate(dateStr) {
   });
 }
 
-function makeAllLinesEditable() {
-  document.querySelectorAll("#journal-content .entry-line").forEach(div => {
-    const txt = div.querySelector(".line-text");
-    if (txt) {
-      txt.contentEditable = true;
-      txt.onkeydown = null;
-      txt.oninput = null;
-
-      txt.addEventListener("input", saveContent);
-
-      txt.addEventListener("keydown", e => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-
-          const type = e.shiftKey ? "checkbox" : "text";
-          const newLine = addEntryLine(type);
-          div.insertAdjacentElement("afterend", newLine);
-          makeAllLinesEditable(); // Rebind for new line
-          newLine.querySelector(".line-text").focus();
-        }
-
-        if (e.key === "Backspace" && txt.textContent.trim() === "") {
-          e.preventDefault();
-          const prev = div.previousElementSibling;
-          div.remove();
-          if (prev) {
-            prev.querySelector(".line-text")?.focus();
-          } else {
-            const fallback = addEntryLine();
-            fallback.querySelector(".line-text").focus();
-          }
-          saveContent();
-        }
-      });
-    }
-  });
-}
 
 function smoothEntryTransition(newHtml) {
   const content = document.getElementById("journal-content");
@@ -563,9 +526,7 @@ function smoothEntryTransition(newHtml) {
       wrapper.appendChild(cb);
       wrapper.appendChild(textDiv);
     });
-
-    ensureEditableLine();
-    makeAllLinesEditable();
+    
     pushUndoState();
     content.style.opacity = 1;
   }, 120);
@@ -598,33 +559,6 @@ function loadContent(mode, slug, label, url) {
   }).catch(() => updateStatus("OFFLINE"));
 }
 
-function ensureEditableLine() {
-  const content = document.getElementById("journal-content");
-  if (content.innerHTML.trim() === "") addEntryLine("Start writing...");
-}
-
-function addEntryLine(type = "text", text = "") {
-  const content = document.getElementById("journal-content");
-  const div = document.createElement("div");
-  div.className = "entry-line";
-
-  if (type === "checkbox") {
-    const cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.onchange = saveContent;
-    div.appendChild(cb);
-  }
-
-  const txt = document.createElement("div");
-  txt.className = "line-text";
-  txt.contentEditable = true;
-  txt.innerHTML = text;
-  txt.addEventListener("input", saveContent);
-
-  div.appendChild(txt);
-  content.appendChild(div);
-  return div;
-}
 
 function forceCheckboxAttrs() {
   const content = document.getElementById("journal-content");
@@ -697,11 +631,18 @@ document.addEventListener("keydown", e => {
   else if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) { undo(); e.preventDefault(); }
   else if ((e.metaKey || e.ctrlKey) && (e.key === "Z" || (e.shiftKey && e.key === "z"))) { redo(); e.preventDefault(); }
   else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "c") {
-    e.preventDefault();
-    const newLine = addEntryLine();
-    newLine.querySelector(".line-text").focus();
-  }
+  e.preventDefault();
+  const newDiv = document.createElement("div");
+  newDiv.innerHTML = "<br>";
+  journalContent.appendChild(newDiv);
+  placeCaretAtStart(newDiv);
+  saveContent();
+}
 });
+  journalContent.addEventListener("input", () => {
+  saveContent();
+});
+
 
 // RECENTS
 function renderRecents() {
@@ -936,6 +877,89 @@ function renderCollections(slugs) {
     box.appendChild(div);
   });
 }
+
+  // ----------------------
+// NOTION-LIKE EDITING LOGIC
+// ----------------------
+
+const journalContent = document.getElementById("journal-content");
+
+journalContent.addEventListener("keydown", (e) => {
+  const sel = window.getSelection();
+  if (!sel.rangeCount) return;
+  const range = sel.getRangeAt(0);
+  const currentBlock = range.startContainer.closest("div");
+
+  if (e.key === "Enter") {
+    e.preventDefault();
+
+    // SHIFT+ENTER → insert checkbox block
+    if (e.shiftKey) {
+      const checkboxDiv = document.createElement("div");
+      checkboxDiv.className = "entry-line";
+
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.onchange = saveContent;
+
+      const text = document.createElement("div");
+      text.className = "line-text";
+      text.contentEditable = true;
+      text.innerHTML = "";
+
+      checkboxDiv.appendChild(cb);
+      checkboxDiv.appendChild(text);
+
+      journalContent.insertBefore(checkboxDiv, currentBlock.nextSibling);
+      placeCaretAtStart(text);
+    } else {
+      // ENTER → new regular block
+      const newDiv = document.createElement("div");
+      newDiv.innerHTML = "<br>";
+      journalContent.insertBefore(newDiv, currentBlock.nextSibling);
+      placeCaretAtStart(newDiv);
+    }
+
+    saveContent();
+  }
+
+  if (e.key === "Backspace") {
+    // Handle backspace at empty block
+    const isEmpty = currentBlock && currentBlock.textContent.trim() === "";
+    const isLineText = currentBlock && currentBlock.classList.contains("line-text");
+
+    if (isEmpty && currentBlock && !isLineText) {
+      e.preventDefault();
+      const prev = currentBlock.previousElementSibling;
+      currentBlock.remove();
+      if (prev) placeCaretAtEnd(prev);
+      saveContent();
+    }
+  }
+});
+
+// Utility: Place caret at start of node
+function placeCaretAtStart(node) {
+  const range = document.createRange();
+  const sel = window.getSelection();
+  range.setStart(node, 0);
+  range.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(range);
+  node.focus?.();
+}
+
+// Utility: Place caret at end of node
+function placeCaretAtEnd(node) {
+  const range = document.createRange();
+  const sel = window.getSelection();
+  range.selectNodeContents(node);
+  range.collapse(false);
+  sel.removeAllRanges();
+  sel.addRange(range);
+  node.focus?.();
+}
+
 
 // INIT
 window.onload = () => {

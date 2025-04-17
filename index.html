@@ -273,21 +273,23 @@
       gap: 8px;
     }
 
-    .popup-buttons button {
-      flex: 1;
-      padding: 6px;
-      font-size: 0.7rem;
-      font-weight: bold;
-      border-radius: 6px;
-      background: none;
-      color: #fff;
-      border: 1px solid #fff;
-      cursor: pointer;
-    }
+  .popup-buttons button {
+  flex: 1;
+  padding: 6px;
+  font-size: 0.7rem;
+  font-weight: bold;
+  border-radius: 6px;
+  background: #444;
+  color: #fff;
+  border: 1px solid #888;
+  cursor: pointer;
+  transition: background 0.2s;
+}
 
-    .popup-buttons button:hover {
-      background: #222;
-    }
+.popup-buttons button:hover {
+  background: #666;
+  color: #fff;
+}
 
     #sync-status {
       position: fixed;
@@ -492,48 +494,43 @@ function makeAllLinesEditable() {
     const txt = div.querySelector(".line-text");
     if (txt) {
       txt.contentEditable = true;
+
       txt.onkeydown = null;
       txt.oninput = null;
+
       txt.addEventListener("input", saveContent);
 
       txt.addEventListener("keydown", e => {
-  if (e.key === "Enter") {
-    e.preventDefault();
+        if (e.key === "Enter") {
+          e.preventDefault();
 
-    const newDiv = document.createElement("div");
-    newDiv.className = "entry-line";
+          const isCheckboxLine = !!div.querySelector("input[type='checkbox']");
 
-    const newText = document.createElement("div");
-    newText.className = "line-text";
-    newText.contentEditable = true;
+          const newDiv = document.createElement("div");
+          newDiv.className = "entry-line";
 
-    const isCheckboxLine = div.querySelector("input[type='checkbox']");
+          if (isCheckboxLine) {
+            const newCB = document.createElement("input");
+            newCB.type = "checkbox";
+            newCB.onchange = saveContent;
+            newDiv.appendChild(newCB);
+          }
 
-    if (isCheckboxLine) {
-      const newCB = document.createElement("input");
-      newCB.type = "checkbox";
-      newCB.onchange = saveContent;
-      newDiv.appendChild(newCB);
-    }
+          const newText = document.createElement("div");
+          newText.className = "line-text";
+          newText.contentEditable = true;
+          newText.addEventListener("input", saveContent);
+          newDiv.appendChild(newText);
 
-    newDiv.appendChild(newText);
-    div.insertAdjacentElement("afterend", newDiv);
-    makeAllLinesEditable();
-    newText.focus();
-    saveContent();
-  }
+          div.insertAdjacentElement("afterend", newDiv);
+          makeAllLinesEditable(); // Rebind event to new line
+          newText.focus();
+        }
 
         if (e.key === "Backspace" && txt.textContent.trim() === "") {
           e.preventDefault();
           div.remove();
           saveContent();
-        }
-
-        if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "c") {
-          e.preventDefault();
-          const newLine = addEntryLine();
-          div.insertAdjacentElement("afterend", newLine);
-          newLine.querySelector(".line-text").focus();
         }
       });
     }

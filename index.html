@@ -668,6 +668,10 @@ function loadContent(mode, slug, label, url) {
       smoothEntryTransition(remote.replace(/<!--.*?-->/, ""));
       localStorage.setItem(`bujocache-${mode}-${slug}`, encodeHTML(remote));
       updateStatus("LOADED SYNCED");
+      setTimeout(() => {
+  const editable = document.querySelector('#journal-content .line-text');
+  if (editable) placeCaretAtEnd(editable);
+}, 150);
     }
   }).catch(() => updateStatus("OFFLINE"));
 }
@@ -845,7 +849,7 @@ function createCollection() {
   const name = input.value.trim().toUpperCase().replace(/\s+/g, "-");
   if (!name) return;
 
-  const html = `<!-- version:${new Date().toISOString()} -->\n<div class="entry-line"><input type="checkbox"><div class="line-text">New collection: ${name}</div></div>`;
+  const html = `<!-- version:${new Date().toISOString()} -->\n<div class="entry-line"><input type="checkbox"><div class="line-text" contenteditable="true">New collection: ${name}</div></div>`;
 
   fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
     method: "POST",

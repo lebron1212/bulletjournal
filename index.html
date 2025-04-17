@@ -33,6 +33,7 @@
       flex-shrink: 0;
       overflow-y: auto;
       max-height: calc(100vh - 60px);
+      position: relative;
     }
 
     #journal-panel {
@@ -102,7 +103,7 @@
     #calendar-btn {
       position: absolute;
       top: 14px;
-      right: 16px;
+      left: 188px;
       font-size: 1.2rem;
       background: none;
       border: none;
@@ -247,6 +248,15 @@
       .entry-line input[type="checkbox"]:checked + .line-text {
         color: #000;
       }
+      .calendar-dot {
+        border-bottom: 2px solid #000 !important;
+      }
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .calendar-dot {
+        border-bottom: 2px solid #fff !important;
+      }
     }
 
     @media (max-width: 700px) {
@@ -268,13 +278,16 @@
   <div id="wrapper">
     <div class="panel">
       <div class="card" id="index-card">
-        <h2>INDEX</h2>
-        <button id="calendar-btn" title="Create new date">+</button>
+        <h2>INDEX
+          <button id="calendar-btn" title="Create new date">+</button>
+        </h2>
         <div class="item" data-entry="yesterday">YESTERDAY</div>
         <div class="item" data-entry="today">TODAY</div>
         <div class="item" data-entry="tomorrow">TOMORROW</div>
 
-        <h2 style="margin-top: 18px;">RECENTS <span id="recents-toggle" style="float: right; cursor: pointer;">▼</span></h2>
+        <h2 style="margin-top: 18px;">RECENTS
+          <span id="recents-toggle" style="float: right; cursor: pointer;">▼</span>
+        </h2>
         <div id="recent-entries" style="display: block;"></div>
       </div>
 
@@ -312,7 +325,7 @@
     </div>
   </div>
 
-  <!-- Collection Popups -->
+  <!-- Create Collection Popup -->
   <div id="collection-popup" class="popup" style="display:none;">
     <h3>NEW COLLECTION</h3>
     <input id="new-collection-name" placeholder="Collection name" />
@@ -322,6 +335,7 @@
     </div>
   </div>
 
+  <!-- Rename Collection Popup -->
   <div id="rename-popup" class="popup" style="display:none;">
     <h3>RENAME COLLECTION</h3>
     <input id="rename-input" placeholder="New name" />
@@ -331,6 +345,7 @@
     </div>
   </div>
 
+  <!-- Delete Collection Popup -->
   <div id="delete-popup" class="popup" style="display:none;">
     <h3>DELETE COLLECTION</h3>
     <p>ARE YOU SURE YOU WANT TO DELETE THIS COLLECTION?</p>
@@ -384,6 +399,16 @@ function highlightActive(slug) {
   document.querySelectorAll(".item").forEach(i => {
     i.classList.toggle("active", i.dataset.entry === slug);
   });
+}
+
+function smoothEntryTransition(newHtml) {
+  const content = document.getElementById("journal-content");
+  content.style.opacity = 0;
+  setTimeout(() => {
+    content.innerHTML = newHtml;
+    ensureEditableLine();
+    content.style.opacity = 1;
+  }, 120);
 }
 
 function loadContent(mode, slug, label, url) {
@@ -482,6 +507,7 @@ function saveContent() {
   pushUndoState();
 }
 
+// Undo / Redo
 let undoStack = [], redoStack = [];
 function pushUndoState() {
   const content = document.getElementById("journal-content");
@@ -523,7 +549,142 @@ document.addEventListener("keydown", e => {
   }
 });
 
-// Calendar logic
+// RECENTS
+function renderRecents() {
+  const box = document.getElementById("recent-entries");
+  box.innerHTML = "";
+  const today = getTodaySlug();
+  const yest = getTodaySlug(-1);
+  const tomo = getTodaySlug(1);
+  recentEntries.filter(slug => ![today, yest, tomo].includes(slug)).forEach(slug => {
+    const div = document.createElement("div");
+    div.className = "item";
+    div.dataset.entry = slug;
+    div.textContent = slug;
+    div.onclick = () => loadContent("daily", slug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${slug}.html`);
+    box.appendChild(div);
+  });
+}
+document.getElementById("recents-toggle").onclick = () => {
+  const box = document.getElementById("recent-entries");
+  const expanded = box.style.display !== "none";
+  box.style.display = expanded ? "none" : "block";
+  document.getElementById("recents-toggle").textContent = expanded ? "▶" : "▼";
+};
+
+// === COLLECTIONS
+function toggleCollectionPopup() {
+  document.getElementById("collection-popup").style.display = "flex";
+}
+function hideRenamePopup() {
+  document.getElementById("rename-popup").style.display = "none";
+}
+function hideDeletePopup() {
+  document.getElementById("delete-popup").style.display = "none";
+}
+function createCollection() {
+  const input = document.getElementById("new-collection-name");
+  const name = input.value.trim().toUpperCase().replace(/\s+/g, "-");
+  if (!name) return;
+  const html = `<!-- version:${new Date().toISOString()} -->\n<div class="entry-line"><input type="checkbox"><div class="line-text">New collection: ${name}</div></div>`;
+  fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ date: name, content: encodeHTML(html), mode: "collection" })
+  }).then(() => {
+    input.value = "";
+    document.getElementById("collection-popup").style.display = "none";
+    const updated = [name, ...new Set([name, ...JSON.parse(localStorage.getItem("collections-list") || "[]")])];
+    localStorage.setItem("collections-list", JSON.stringify(updated));
+    renderCollections(updated);
+  });
+}
+function confirmRename() {
+  const newName = document.getElementById("rename-input").value.trim().toUpperCase().replace(/\s+/g, "-");
+  if (!newName || !window._renameTarget) return;
+  fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ rename: window._renameTarget, to: newName, mode: "collection" })
+  }).then(() => {
+    hideRenamePopup();
+    const updated = JSON.parse(localStorage.getItem("collections-list") || "[]").map(s => s === window._renameTarget ? newName : s);
+    localStorage.setItem("collections-list", JSON.stringify(updated));
+    renderCollections(updated);
+  });
+}
+function confirmDelete() {
+  if (!window._deleteTarget) return;
+  fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ delete: window._deleteTarget, mode: "collection" })
+  }).then(() => {
+    hideDeletePopup();
+    const updated = JSON.parse(localStorage.getItem("collections-list") || "[]").filter(s => s !== window._deleteTarget);
+    localStorage.setItem("collections-list", JSON.stringify(updated));
+    renderCollections(updated);
+  });
+}
+function loadCollectionsList() {
+  const box = document.getElementById("collections-list");
+  const stored = localStorage.getItem("collections-list");
+  let slugs = stored ? JSON.parse(stored) : [];
+  renderCollections(slugs);
+  fetch("https://api.github.com/repos/lebron1212/bulletjournal/contents/journals/collections")
+    .then(res => res.ok ? res.json() : [])
+    .then(data => {
+      const remoteSlugs = data
+        .filter(i => i.name.startsWith("collection-") && i.name.endsWith(".html"))
+        .map(i => i.name.replace("collection-", "").replace(".html", ""));
+      localStorage.setItem("collections-list", JSON.stringify(remoteSlugs));
+      renderCollections(remoteSlugs);
+    });
+}
+function renderCollections(slugs) {
+  const box = document.getElementById("collections-list");
+  box.innerHTML = "";
+  slugs.forEach(slug => {
+    const div = document.createElement("div");
+    div.className = "item";
+    div.dataset.entry = slug;
+    div.textContent = slug;
+
+    const ctrl = document.createElement("div");
+    ctrl.className = "item-controls";
+
+    const rename = document.createElement("button");
+    rename.className = "icon-btn";
+    rename.innerText = "✎";
+    rename.onclick = e => {
+      e.stopPropagation();
+      window._renameTarget = slug;
+      document.getElementById("rename-input").value = slug;
+      document.getElementById("rename-popup").style.display = "flex";
+    };
+
+    const del = document.createElement("button");
+    del.className = "icon-btn";
+    del.innerText = "✕";
+    del.onclick = e => {
+      e.stopPropagation();
+      window._deleteTarget = slug;
+      document.getElementById("delete-popup").style.display = "flex";
+    };
+
+    ctrl.appendChild(rename);
+    ctrl.appendChild(del);
+    div.appendChild(ctrl);
+
+    div.onclick = () => {
+      loadContent("collection", slug, slug, `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/collections/collection-${slug}.html`);
+    };
+
+    box.appendChild(div);
+  });
+}
+
+// CALENDAR
 const calendarPopup = document.getElementById("calendar-popup");
 const calendarGrid = document.getElementById("calendar-grid");
 const calendarMonthLabel = document.getElementById("calendar-month");
@@ -536,7 +697,6 @@ function openCalendarPopup() {
   selectedCalendarDate = null;
   renderCalendar();
 }
-
 function renderCalendar() {
   const month = calendarDate.getMonth();
   const year = calendarDate.getFullYear();
@@ -545,11 +705,7 @@ function renderCalendar() {
   const dots = getDotDaysForMonth(year, month);
   calendarGrid.innerHTML = "";
   calendarMonthLabel.textContent = `${calendarDate.toLocaleString('default', { month: 'long' })} ${year}`;
-
-  for (let i = 0; i < firstDay; i++) {
-    calendarGrid.appendChild(document.createElement("div"));
-  }
-
+  for (let i = 0; i < firstDay; i++) calendarGrid.appendChild(document.createElement("div"));
   for (let d = 1; d <= daysInMonth; d++) {
     const day = document.createElement("div");
     day.textContent = d;
@@ -557,65 +713,48 @@ function renderCalendar() {
     day.style.border = "1px solid #333";
     day.style.textAlign = "center";
     day.style.cursor = "pointer";
+    if (dots.has(d)) day.classList.add("calendar-dot");
     day.onclick = () => {
       selectedCalendarDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
       calendarCreateBtn.disabled = false;
     };
-    if (dots.has(d)) {
-      day.style.borderBottom = "2px solid #0ff";
-    }
     calendarGrid.appendChild(day);
   }
 }
-
 function getDotDaysForMonth(year, month) {
   const dots = new Set();
   Object.keys(localStorage).forEach(key => {
     if (key.startsWith("bujocache-daily-")) {
       const slug = key.split("bujocache-daily-")[1];
       const d = new Date(slug);
-      if (d.getFullYear() === year && d.getMonth() === month) {
-        dots.add(d.getDate());
-      }
+      if (d.getFullYear() === year && d.getMonth() === month) dots.add(d.getDate());
     }
   });
   return dots;
 }
-
 document.getElementById("calendar-btn").onclick = openCalendarPopup;
-document.getElementById("prev-month").onclick = () => {
-  calendarDate.setMonth(calendarDate.getMonth() - 1);
-  renderCalendar();
-};
-document.getElementById("next-month").onclick = () => {
-  calendarDate.setMonth(calendarDate.getMonth() + 1);
-  renderCalendar();
-};
+document.getElementById("prev-month").onclick = () => { calendarDate.setMonth(calendarDate.getMonth() - 1); renderCalendar(); };
+document.getElementById("next-month").onclick = () => { calendarDate.setMonth(calendarDate.getMonth() + 1); renderCalendar(); };
 calendarCreateBtn.onclick = () => {
   if (!selectedCalendarDate) return;
   calendarPopup.style.display = "none";
   loadContent("daily", selectedCalendarDate, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${selectedCalendarDate}.html`);
 };
 
-// Recents and collections logic skipped here (already sent in Part 2)
-
-// Final load
+// FINAL INIT
 window.onload = () => {
   recentEntries = JSON.parse(localStorage.getItem("recent-entries") || "[]");
   renderRecents();
   loadCollectionsList();
-
   const today = getTodaySlug();
   const yest = getTodaySlug(-1);
   const tomo = getTodaySlug(1);
-
   document.querySelector('[data-entry="today"]').onclick = () =>
     loadContent("daily", today, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${today}.html`);
   document.querySelector('[data-entry="yesterday"]').onclick = () =>
     loadContent("daily", yest, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${yest}.html`);
   document.querySelector('[data-entry="tomorrow"]').onclick = () =>
     loadContent("daily", tomo, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${tomo}.html`);
-
   loadContent("daily", today, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${today}.html`);
 };
 </script>

@@ -890,25 +890,30 @@ function placeCaretAtEnd(node) {
 window.onload = () => {
   const journalContent = document.getElementById("journal-content");
 
-  // 🧠 In-block keydown listener for editing logic
   journalContent.addEventListener("keydown", (e) => {
-    const sel = window.getSelection();
-    if (!sel.rangeCount) return;
-    const range = sel.getRangeAt(0);
-    let currentBlock = range.startContainer;
-while (currentBlock && currentBlock !== journalContent && !currentBlock.classList.contains("entry-line") && !currentBlock.classList.contains("line-text")) {
-  currentBlock = currentBlock.parentElement;
-}
+  if (e.key !== "Enter") return;
 
-    if (e.key === "Enter") {
+  const sel = window.getSelection();
+  if (!sel.rangeCount) return;
+
+  const range = sel.getRangeAt(0);
+  let currentBlock = range.startContainer;
+
+  // Walk up to the closest block
+  while (currentBlock && currentBlock !== journalContent && !currentBlock.classList.contains("entry-line") && !currentBlock.classList.contains("line-text")) {
+    currentBlock = currentBlock.parentElement;
+  }
+
+  // Still not valid? bail.
+  if (!currentBlock || currentBlock === journalContent) return;
+
   e.preventDefault();
 
   const isShift = e.shiftKey;
-
   const newBlock = document.createElement("div");
 
   if (isShift) {
-    // SHIFT+ENTER → checkbox line
+    // ✅ SHIFT + ENTER = checkbox line
     newBlock.className = "entry-line";
 
     const cb = document.createElement("input");
@@ -922,35 +927,20 @@ while (currentBlock && currentBlock !== journalContent && !currentBlock.classLis
 
     newBlock.appendChild(cb);
     newBlock.appendChild(text);
-    journalContent.insertBefore(newBlock, currentBlock.nextSibling);
+    journalContent.insertBefore(newBlock, currentBlock.closest(".entry-line")?.nextSibling || currentBlock.nextSibling);
     placeCaretAtStart(text);
   } else {
-    // ENTER → plain line
+    // ✅ ENTER = plain line
     newBlock.className = "line-text";
     newBlock.contentEditable = true;
     newBlock.innerHTML = "";
-    journalContent.insertBefore(newBlock, currentBlock.nextSibling);
+
+    journalContent.insertBefore(newBlock, currentBlock.closest(".entry-line")?.nextSibling || currentBlock.nextSibling);
     placeCaretAtStart(newBlock);
   }
 
   saveContent();
-}
-
-    if (e.key === "Backspace") {
-      // Handle backspace at empty block
-      const isEmpty = currentBlock && currentBlock.textContent.trim() === "";
-      const isLineText = currentBlock && currentBlock.classList.contains("line-text");
-
-      if (isEmpty && currentBlock && !isLineText) {
-        e.preventDefault();
-        const prev = currentBlock.previousElementSibling;
-        currentBlock.remove();
-        if (prev) placeCaretAtEnd(prev);
-        saveContent();
-      }
-    }
-  });
-
+});
   // ✅ Global shortcuts (moved here to fix journalContent reference error)
   document.addEventListener("keydown", (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "b") {

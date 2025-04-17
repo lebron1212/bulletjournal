@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>Bullet Journal</title>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <style>
     * { box-sizing: border-box; }
     html, body {
@@ -14,10 +13,11 @@
       padding: 0;
       height: 100%;
       background: transparent;
-      color: #111;
+      color: #eee;
       text-transform: uppercase;
       overflow: hidden;
     }
+    body.light-mode { color: #000; background: #fff; }
     ::-webkit-scrollbar { display: none; }
 
     #wrapper {
@@ -27,7 +27,6 @@
       width: 100%;
       padding: 32px 20px;
       gap: 32px;
-      transition: all 0.3s ease;
     }
 
     .panel {
@@ -60,13 +59,12 @@
       border-bottom: 1px solid #444;
       padding-bottom: 6px;
       font-weight: 700;
-      color: #222;
     }
 
     .item {
       font-size: 0.75rem;
       margin-bottom: 10px;
-      color: #666;
+      color: #888;
       display: flex;
       justify-content: space-between;
       cursor: pointer;
@@ -74,7 +72,7 @@
 
     .item.active {
       font-weight: bold;
-      color: #000;
+      color: #fff;
     }
 
     .item-controls {
@@ -92,7 +90,7 @@
     }
 
     .icon-btn:hover {
-      color: #000;
+      color: #fff;
     }
 
     .add-collection-link {
@@ -111,7 +109,7 @@
       font-size: 1.2rem;
       background: none;
       border: none;
-      color: #111;
+      color: inherit;
       cursor: pointer;
     }
 
@@ -130,7 +128,7 @@
 
     #entry-date {
       font-size: 0.7rem;
-      color: #888;
+      color: #aaa;
     }
 
     #journal-content {
@@ -138,7 +136,6 @@
       overflow-y: auto;
       padding-right: 6px;
     }
-
     .entry-line {
       display: flex;
       align-items: center;
@@ -147,28 +144,23 @@
     }
 
     .entry-line input[type="checkbox"] {
-      transform: scale(1.2);
-      cursor: pointer;
       appearance: none;
       width: 16px;
       height: 16px;
-      border: 1px solid #222;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 12px;
+      border: 1px solid #999;
+      display: inline-block;
+      position: relative;
+      cursor: pointer;
       background: transparent;
     }
 
     .entry-line input[type="checkbox"]:checked::after {
       content: "X";
-      color: #000;
-      font-weight: bold;
-    }
-
-    .entry-line.checked .line-text {
-      text-decoration: line-through;
-      color: #888;
+      color: #0ff;
+      font-size: 0.8rem;
+      position: absolute;
+      top: 0;
+      left: 2px;
     }
 
     .entry-line .line-text {
@@ -177,7 +169,11 @@
       min-height: 18px;
       padding: 2px 0;
       word-break: break-word;
-      color: #111;
+    }
+
+    .entry-line.checked .line-text {
+      text-decoration: line-through;
+      opacity: 0.6;
     }
 
     .popup {
@@ -185,7 +181,7 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%,-50%);
-      background: #fff;
+      background: #111;
       border: 1px solid #444;
       padding: 20px;
       width: 280px;
@@ -195,7 +191,6 @@
       display: flex;
       flex-direction: column;
       gap: 12px;
-      color: #000;
     }
 
     .popup h3 {
@@ -214,7 +209,7 @@
       font-family: 'IBM Plex Mono', monospace;
       background: none;
       border: 1px solid #444;
-      color: #000;
+      color: #fff;
       font-size: 0.75rem;
       width: 100%;
     }
@@ -231,13 +226,13 @@
       font-weight: bold;
       border-radius: 6px;
       background: none;
-      color: #000;
-      border: 1px solid #000;
+      color: #fff;
+      border: 1px solid #fff;
       cursor: pointer;
     }
 
     .popup-buttons button:hover {
-      background: #eee;
+      background: #222;
     }
 
     #sync-status {
@@ -247,8 +242,6 @@
       transform: translateX(-50%);
       font-size: 0.65rem;
       opacity: 0.8;
-      text-align: center;
-      color: #333;
     }
 
     @media (max-width: 700px) {
@@ -263,6 +256,9 @@
       #journal-panel {
         min-height: 300px;
       }
+      .entry-line .drag-handle {
+        display: none;
+      }
     }
   </style>
 </head>
@@ -276,9 +272,7 @@
         <div class="item" data-entry="today">TODAY</div>
         <div class="item" data-entry="tomorrow">TOMORROW</div>
 
-        <h2 style="margin-top: 18px;">RECENTS 
-          <span id="recents-toggle" style="float: right; cursor: pointer;">▼</span>
-        </h2>
+        <h2 style="margin-top: 18px;">RECENTS <span id="recents-toggle" style="float: right; cursor: pointer;">▼</span></h2>
         <div id="recent-entries" style="display: block;"></div>
       </div>
 
@@ -352,103 +346,11 @@
     <span class="label">SYNCED</span>
   </div>
 <script>
-let currentMode = "daily";
-let currentSlug = "";
-let recentEntries = [];
-let selectedCalendarDate = null;
+const content = document.getElementById("journal-content");
 
-// === UTILS ===
-function getTodaySlug(offset = 0) {
-  const d = new Date();
-  d.setDate(d.getDate() + offset);
-  return d.toISOString().slice(0, 10);
-}
-function formatPrettyDate(dateStr) {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }).toUpperCase();
-}
-function encodeHTML(str) {
-  return btoa(unescape(encodeURIComponent(str)));
-}
-function decodeHTML(str) {
-  return decodeURIComponent(escape(atob(str)));
-}
-function extractVersion(html) {
-  const match = html.match(/<!-- version:(.*?)-->/);
-  return match ? new Date(match[1]) : new Date(0);
-}
-function updateStatus(text, syncing = false) {
-  const label = document.querySelector("#sync-status .label");
-  const spinner = document.querySelector("#sync-status .spinner");
-  label.textContent = text;
-  spinner.style.display = syncing ? "inline-block" : "none";
-}
-
-// === CONTENT LOADING ===
-function highlightActive(slug) {
-  document.querySelectorAll(".item").forEach(i =>
-    i.classList.toggle("active", i.dataset.entry === slug)
-  );
-}
-
-function loadContent(mode, slug, label, url) {
-  currentMode = mode;
-  currentSlug = slug;
-  document.getElementById("entry-title").textContent = label;
-  document.getElementById("entry-date").textContent = (mode === "daily") ? formatPrettyDate(slug) : "";
-  highlightActive(slug);
-  const content = document.getElementById("journal-content");
-  content.style.opacity = 0;
-
-  const today = getTodaySlug();
-  const yest = getTodaySlug(-1);
-  const tomo = getTodaySlug(1);
-  if (![today, yest, tomo].includes(slug) && mode === "daily") {
-    recentEntries = [slug, ...recentEntries.filter(s => s !== slug && ![today, yest, tomo].includes(s))].slice(0, 2);
-    localStorage.setItem("recent-entries", JSON.stringify(recentEntries));
-    renderRecents();
-  }
-
-  const cached = localStorage.getItem(`bujocache-${mode}-${slug}`);
-  const cachedHtml = cached ? decodeHTML(cached) : "";
-  const cachedVer = extractVersion(cachedHtml);
-  content.innerHTML = cachedHtml.replace(/<!--.*?-->/, "") || "";
-  ensureLineStructure();
-  updateStatus(cached ? "LOADED CACHED" : "EMPTY");
-
-  fetch(url).then(res => res.ok ? res.text() : null).then(remote => {
-    if (!remote) return;
-    const remoteVer = extractVersion(remote);
-    if (remoteVer > cachedVer) {
-      content.innerHTML = remote.replace(/<!--.*?-->/, "");
-      localStorage.setItem(`bujocache-${mode}-${slug}`, encodeHTML(remote));
-      updateStatus("LOADED SYNCED");
-    }
-    ensureLineStructure();
-    setTimeout(() => { content.style.opacity = 1; }, 100);
-  }).catch(() => updateStatus("OFFLINE"));
-}
-
-// === CHECKBOXES + EDITABLE LINE STRUCTURE ===
-function ensureLineStructure() {
-  const lines = [...content.children];
-  if (lines.length === 0) return addEntryLine();
-  lines.forEach(line => {
-    const cb = line.querySelector('input[type="checkbox"]');
-    const txt = line.querySelector('.line-text');
-    if (cb?.checked) {
-      txt.style.textDecoration = "line-through";
-      cb.setAttribute("checked", "checked");
-    } else {
-      txt.style.textDecoration = "none";
-      cb?.removeAttribute("checked");
-    }
-    txt.contentEditable = true;
-    cb?.addEventListener("change", () => {
-      saveContent();
-      ensureLineStructure();
-    });
-  });
+// === ENTRY UTILS ===
+function ensureEditableLine() {
+  if (content.innerHTML.trim() === "") addEntryLine("Start writing...");
 }
 function addEntryLine(text = "") {
   const div = document.createElement("div");
@@ -457,8 +359,8 @@ function addEntryLine(text = "") {
   const cb = document.createElement("input");
   cb.type = "checkbox";
   cb.onchange = () => {
+    formatCompletedLine(cb);
     saveContent();
-    ensureLineStructure();
   };
 
   const txt = document.createElement("div");
@@ -470,16 +372,60 @@ function addEntryLine(text = "") {
   div.appendChild(txt);
   content.appendChild(div);
 }
+function formatCompletedLine(cb) {
+  const line = cb.parentElement.querySelector(".line-text");
+  if (cb.checked) {
+    line.style.textDecoration = "line-through";
+    cb.outerHTML = '<span class="checkbox-x">X</span>';
+  } else {
+    cb.outerHTML = '<input type="checkbox">';
+  }
+}
+function reformatCheckboxes() {
+  content.querySelectorAll('.entry-line').forEach(line => {
+    const cb = line.querySelector("input[type='checkbox']");
+    if (cb && cb.checked) formatCompletedLine(cb);
+  });
+}
 
-// === SAVE / SYNC ===
-let undoStack = [], redoStack = [];
+// === RECENTS ===
+function renderRecents() {
+  const box = document.getElementById("recent-entries");
+  box.innerHTML = "";
+  const today = getTodaySlug();
+  const yest = getTodaySlug(-1);
+  const tomo = getTodaySlug(1);
+  const reserved = [today, yest, tomo];
+
+  recentEntries.filter(slug => !reserved.includes(slug) && !slug.startsWith("collection-")).forEach(slug => {
+    const div = document.createElement("div");
+    div.className = "item";
+    div.dataset.entry = slug;
+    div.textContent = slug;
+    div.onclick = () => loadContent("daily", slug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${slug}.html`);
+    box.appendChild(div);
+  });
+}
+
+// === TODAY / YESTERDAY / TOMORROW LOAD ===
+function attachStaticLoaders() {
+  const today = getTodaySlug();
+  const yest = getTodaySlug(-1);
+  const tomo = getTodaySlug(1);
+
+  document.querySelector('[data-entry="today"]').onclick = () =>
+    loadContent("daily", today, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${today}.html`);
+
+  document.querySelector('[data-entry="yesterday"]').onclick = () =>
+    loadContent("daily", yest, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${yest}.html`);
+
+  document.querySelector('[data-entry="tomorrow"]').onclick = () =>
+    loadContent("daily", tomo, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${tomo}.html`);
+}
+// === SYNC + SAVE ===
 function saveLocal() {
   const html = `<!-- version:${new Date().toISOString()} -->\n${content.innerHTML}`;
   localStorage.setItem(`bujocache-${currentMode}-${currentSlug}`, encodeHTML(html));
-}
-function debounceSync() {
-  clearTimeout(window._syncTimeout);
-  window._syncTimeout = setTimeout(syncRemote, 1000);
 }
 function syncRemote() {
   const html = `<!-- version:${new Date().toISOString()} -->\n${content.innerHTML}`;
@@ -491,6 +437,10 @@ function syncRemote() {
   }).then(res => updateStatus(res.ok ? "SYNCED" : "NETLIFY ERROR"))
     .catch(() => updateStatus("SYNC FAILED"));
 }
+function debounceSync() {
+  clearTimeout(window._syncTimeout);
+  window._syncTimeout = setTimeout(syncRemote, 800);
+}
 function saveContent() {
   saveLocal();
   debounceSync();
@@ -498,6 +448,7 @@ function saveContent() {
 }
 
 // === UNDO / REDO ===
+let undoStack = [], redoStack = [];
 function pushUndoState() {
   undoStack.push(content.innerHTML);
   if (undoStack.length > 50) undoStack.shift();
@@ -507,7 +458,7 @@ function undo() {
   if (undoStack.length > 1) {
     redoStack.push(undoStack.pop());
     content.innerHTML = undoStack[undoStack.length - 1];
-    ensureLineStructure();
+    reformatCheckboxes();
     saveContent();
   }
 }
@@ -516,117 +467,129 @@ function redo() {
     const state = redoStack.pop();
     undoStack.push(state);
     content.innerHTML = state;
-    ensureLineStructure();
+    reformatCheckboxes();
     saveContent();
   }
 }
 
 // === SHORTCUTS ===
 document.addEventListener("keydown", e => {
-  if ((e.metaKey || e.ctrlKey) && e.key === "b") {
+  if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
+    undo(); e.preventDefault();
+  } else if ((e.metaKey || e.ctrlKey) && (e.key === "Z" || (e.shiftKey && e.key === "z"))) {
+    redo(); e.preventDefault();
+  } else if ((e.metaKey || e.ctrlKey) && e.key === "b") {
     document.execCommand("bold"); e.preventDefault();
   } else if ((e.metaKey || e.ctrlKey) && e.key === "i") {
     document.execCommand("italic"); e.preventDefault();
   } else if ((e.metaKey || e.ctrlKey) && e.key === "u") {
     document.execCommand("underline"); e.preventDefault();
-  } else if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
-    undo(); e.preventDefault();
-  } else if ((e.metaKey || e.ctrlKey) && ((e.key === "Z") || (e.shiftKey && e.key === "z"))) {
-    redo(); e.preventDefault();
   }
 });
 
-// === RECENTS FIX (exclude collections) ===
-function renderRecents() {
-  const box = document.getElementById("recent-entries");
-  box.innerHTML = "";
-  const today = getTodaySlug();
-  const yest = getTodaySlug(-1);
-  const tomo = getTodaySlug(1);
-  const collections = JSON.parse(localStorage.getItem("collections-list") || "[]");
-  recentEntries.filter(slug =>
-    ![today, yest, tomo].includes(slug) &&
-    !collections.includes(slug)
-  ).forEach(slug => {
-    const div = document.createElement("div");
-    div.className = "item";
-    div.dataset.entry = slug;
-    div.textContent = slug;
-    div.onclick = () => loadContent("daily", slug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${slug}.html`);
-    box.appendChild(div);
-  });
-}
-
-// === CALENDAR ===
-const calendarPopup = document.getElementById("calendar-popup");
-const calendarGrid = document.getElementById("calendar-grid");
-const calendarMonthLabel = document.getElementById("calendar-month");
-const calendarCreateBtn = document.getElementById("calendar-create");
-let calendarDate = new Date();
-
-function openCalendarPopup() {
-  calendarPopup.style.display = "flex";
-  calendarCreateBtn.disabled = true;
+// === CALENDAR POPUP ===
+document.getElementById("calendar-btn").onclick = () => {
+  document.getElementById("calendar-popup").style.display = "flex";
   selectedCalendarDate = null;
   renderCalendar();
-}
-function renderCalendar() {
-  const month = calendarDate.getMonth();
-  const year = calendarDate.getFullYear();
-  const firstDay = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const dots = getDotDaysForMonth(year, month);
-  calendarGrid.innerHTML = "";
-  calendarMonthLabel.textContent = `${calendarDate.toLocaleString('default', { month: 'long' })} ${year}`;
-  for (let i = 0; i < firstDay; i++) calendarGrid.appendChild(document.createElement("div"));
-  for (let d = 1; d <= daysInMonth; d++) {
-    const day = document.createElement("div");
-    day.textContent = d;
-    day.style.padding = "4px";
-    day.style.border = "1px solid #333";
-    day.style.textAlign = "center";
-    day.style.cursor = "pointer";
-    if (dots.has(d)) day.style.borderBottom = "2px solid #0ff";
-    day.onclick = () => {
-      selectedCalendarDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-      calendarCreateBtn.disabled = false;
-    };
-    calendarGrid.appendChild(day);
-  }
-}
-function getDotDaysForMonth(year, month) {
-  const dots = new Set();
-  Object.keys(localStorage).forEach(key => {
-    if (key.startsWith("bujocache-daily-")) {
-      const slug = key.split("bujocache-daily-")[1];
-      const d = new Date(slug);
-      if (d.getFullYear() === year && d.getMonth() === month) dots.add(d.getDate());
-    }
-  });
-  return dots;
-}
-document.getElementById("calendar-btn").onclick = openCalendarPopup;
-document.getElementById("prev-month").onclick = () => { calendarDate.setMonth(calendarDate.getMonth() - 1); renderCalendar(); };
-document.getElementById("next-month").onclick = () => { calendarDate.setMonth(calendarDate.getMonth() + 1); renderCalendar(); };
+};
+
+document.getElementById("prev-month").onclick = () => {
+  calendarDate.setMonth(calendarDate.getMonth() - 1);
+  renderCalendar();
+};
+document.getElementById("next-month").onclick = () => {
+  calendarDate.setMonth(calendarDate.getMonth() + 1);
+  renderCalendar();
+};
 calendarCreateBtn.onclick = () => {
   if (!selectedCalendarDate) return;
-  calendarPopup.style.display = "none";
+  document.getElementById("calendar-popup").style.display = "none";
   loadContent("daily", selectedCalendarDate, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${selectedCalendarDate}.html`);
 };
 
+// === PAGE SWITCH ANIMATION ===
+function fadeTransition(callback) {
+  const panel = document.getElementById("journal-panel");
+  panel.style.opacity = "0.4";
+  setTimeout(() => {
+    callback();
+    panel.style.opacity = "1";
+  }, 150);
+}
+const originalLoadContent = loadContent;
+loadContent = function (...args) {
+  fadeTransition(() => originalLoadContent.apply(this, args));
+};
 // === INIT ===
 window.onload = () => {
+  const today = getTodaySlug();
+  const yesterday = getTodaySlug(-1);
+  const tomorrow = getTodaySlug(1);
+
+  document.querySelector('[data-entry="today"]').onclick = () =>
+    loadContent("daily", today, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${today}.html`);
+
+  document.querySelector('[data-entry="yesterday"]').onclick = () =>
+    loadContent("daily", yesterday, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${yesterday}.html`);
+
+  document.querySelector('[data-entry="tomorrow"]').onclick = () =>
+    loadContent("daily", tomorrow, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${tomorrow}.html`);
+
+  // Load collections from GitHub
+  loadCollectionsList();
+
+  // Load recents and today's entry
   recentEntries = JSON.parse(localStorage.getItem("recent-entries") || "[]");
   renderRecents();
-  loadCollectionsList();
-  const today = getTodaySlug();
-  const yest = getTodaySlug(-1);
-  const tomo = getTodaySlug(1);
-  document.querySelector('[data-entry="today"]').onclick = () => loadContent("daily", today, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${today}.html`);
-  document.querySelector('[data-entry="yesterday"]').onclick = () => loadContent("daily", yest, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${yest}.html`);
-  document.querySelector('[data-entry="tomorrow"]').onclick = () => loadContent("daily", tomo, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${tomo}.html`);
   loadContent("daily", today, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${today}.html`);
 };
 </script>
+
+<style>
+  /* Hide scrollbar in Notion embed */
+  ::-webkit-scrollbar { display: none; }
+  body {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Reformat checkbox completion visuals */
+  .entry-line input[type="checkbox"]:checked + .line-text {
+    text-decoration: line-through;
+    opacity: 0.6;
+    position: relative;
+  }
+
+  .entry-line input[type="checkbox"]::before {
+    content: " ";
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 1px solid #999;
+    margin-right: 6px;
+    background: transparent;
+  }
+
+  .entry-line input[type="checkbox"]:checked::before {
+    content: "X";
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    text-align: center;
+    line-height: 16px;
+    color: #0ff;
+    font-size: 0.75rem;
+    font-weight: bold;
+  }
+
+  /* Fix sync indicator */
+  #sync-status {
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 10px;
+    text-align: center;
+  }
+</style>
 </body>
 </html>

@@ -178,12 +178,26 @@
   cursor: text;
   white-space: pre-wrap;
   border: none;
+  display: block;
   outline: none;
 }
 
     .line-text:focus {
   outline: none;
 }
+
+    .entry-line input[type="checkbox"]:focus,
+.entry-line .line-text:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+    #journal-panel:focus,
+#journal-panel:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
 
 
     .entry-line .line-text {
@@ -504,16 +518,24 @@ function addEntryLine(text = "") {
   txt.className = "line-text";
   txt.contentEditable = true;
   txt.innerHTML = text;
-  txt.addEventListener("input", () => {
-  saveContent(); // ensures local save and sync
-});
 
+  // Save on typing
+  txt.addEventListener("input", saveContent);
+
+  // 🧹 Backspace-to-delete empty line
+  txt.addEventListener("keydown", e => {
+    if (e.key === "Backspace" && txt.textContent.trim() === "") {
+      e.preventDefault();
+      div.remove();
+      saveContent();
+    }
+  });
 
   div.appendChild(cb);
   div.appendChild(txt);
   content.appendChild(div);
 
-  saveContent(); // optional: saves on new line
+  saveContent();
   return div;
 }
 
@@ -589,8 +611,10 @@ document.addEventListener("keydown", e => {
   else if ((e.metaKey || e.ctrlKey) && (e.key === "Z" || (e.shiftKey && e.key === "z"))) { redo(); e.preventDefault(); }
   else if (e.key === "Enter" && document.activeElement.classList.contains("line-text")) {
     e.preventDefault();
-    const newLine = addEntryLine();
-    newLine.querySelector(".line-text").focus();
+    const currentLine = e.target.closest(".entry-line");
+const newLine = addEntryLine();
+currentLine.insertAdjacentElement("afterend", newLine);
+newLine.querySelector(".line-text").focus();
   }
   else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "c") {
     e.preventDefault();

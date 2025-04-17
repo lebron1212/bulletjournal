@@ -473,7 +473,7 @@
         </div>
       </div>
       <div id="journal-wrapper">
-  <div id="journal-content" class="notes" contenteditable="true" spellcheck="false"></div>
+  <div id="journal-content" class="notes"></div>
 </div>
     </div>
   </div>
@@ -986,6 +986,33 @@ function renderCollections(slugs) {
 
   let journalContent;
 
+  function createLineBlock(type = "text", text = "") {
+  const block = document.createElement("div");
+
+  if (type === "checkbox") {
+    block.className = "entry-line";
+
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.onchange = saveContent;
+
+    const content = document.createElement("div");
+    content.className = "line-text";
+    content.contentEditable = true;
+    content.innerHTML = text;
+
+    block.appendChild(cb);
+    block.appendChild(content);
+  } else {
+    block.className = "line-text";
+    block.contentEditable = true;
+    block.innerHTML = text;
+  }
+
+  return block;
+}
+
+
 
 // Utility: Place caret at start of node
 function placeCaretAtStart(node) {
@@ -1017,148 +1044,42 @@ bindPopupKeys('rename-popup', confirmRename, hideRenamePopup);
 bindPopupKeys('delete-popup', confirmDelete, hideDeletePopup);
   journalContent = document.getElementById("journal-content");
  journalContent.addEventListener("keydown", (e) => {
-  const sel = window.getSelection();
-  if (!sel.rangeCount) return;
+  const active = document.activeElement;
+  if (!active || !active.isContentEditable) return;
 
-  const range = sel.getRangeAt(0);
-  let node = range.startContainer;
+  const parent = active.closest(".entry-line") || active;
 
-  while (node && node.nodeType !== 1) node = node.parentNode;
-  if (!node) return;
-
-  let parent = node.closest(".entry-line");
-
-  // 🛠 Fallback: force-wrap raw/empty lines
-  if (!parent) {
-    const wrapper = document.createElement("div");
-    wrapper.className = "line-text";
-    wrapper.contentEditable = true;
-    wrapper.innerHTML = "";
-    journalContent.appendChild(wrapper);
-    placeCaretAtStart(wrapper);
-    parent = wrapper;
-  }
-
-  // 🩹 Handle unwrapped junk nodes
-  if (!node.classList.contains("line-text") && !parent.classList.contains("entry-line")) {
-    const wrapper = document.createElement("div");
-    wrapper.className = "line-text";
-    wrapper.contentEditable = true;
-    wrapper.innerHTML = "";
-    journalContent.insertBefore(wrapper, node.nextSibling || null);
-    journalContent.removeChild(node);
-    parent = wrapper;
-  }
-   
-   // Trigger command mode when typing `/`
-if (e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey) {
-  isCommandMode = true;
-  commandBuffer = "/";
-  window._targetBlock = parent; // ⬅️ set target so command applies correctly
-  openCommandPalette();
-  return;
-}
-
-  // If we're typing a command...
-  if (isCommandMode) {
-    if (e.key.length === 1 && !e.metaKey && !e.ctrlKey) {
-      commandBuffer += e.key;
-      return;
-    }
-
-    if (e.key === "Backspace") {
-      commandBuffer = commandBuffer.slice(0, -1);
-      if (commandBuffer.length <= 1) isCommandMode = false;
-      return;
-    }
-
-    if (e.key === "Enter") {
-      e.preventDefault();
-
-      // Interpret the command
-      const cmd = commandBuffer.trim().toLowerCase();
-      isCommandMode = false;
-      commandBuffer = "";
-
-      // Handle `/todo`
-      if (cmd === "/todo") {
-        const checkboxBlock = document.createElement("div");
-        checkboxBlock.className = "entry-line";
-
-        const cb = document.createElement("input");
-        cb.type = "checkbox";
-        cb.onchange = saveContent;
-
-        const lineText = document.createElement("div");
-        lineText.className = "line-text";
-        lineText.contentEditable = true;
-        lineText.innerHTML = "";
-
-        checkboxBlock.appendChild(cb);
-        checkboxBlock.appendChild(lineText);
-
-        journalContent.replaceChild(checkboxBlock, parent);
-        placeCaretAtStart(lineText);
-        saveContent();
-        return;
-      }
-
-      // Unknown command — just insert a blank line
-      const newBlock = document.createElement("div");
-      newBlock.className = "line-text";
-      newBlock.contentEditable = true;
-      newBlock.innerHTML = "";
-
-      journalContent.insertBefore(newBlock, parent.nextSibling);
-      placeCaretAtStart(newBlock);
-      saveContent();
-      return;
-    }
-
-    // Cancel command mode
-    if (e.key === "Escape") {
-      isCommandMode = false;
-      commandBuffer = "";
-    }
-
-    return;
-  }
-
-  // Normal Enter logic (not command)
+  // ENTER adds a new block
   if (e.key === "Enter") {
     e.preventDefault();
 
-    const isInCheckbox = parent.classList.contains("entry-line");
-    const newBlock = document.createElement("div");
+    const isCheckbox = parent.classList.contains("entry-line");
+    const newBlock = createLineBlock(isCheckbox ? "checkbox" : "text");
 
-    if (isInCheckbox) {
-      newBlock.className = "entry-line";
-
-      const cb = document.createElement("input");
-      cb.type = "checkbox";
-      cb.onchange = saveContent;
-
-      const lineText = document.createElement("div");
-      lineText.className = "line-text";
-      lineText.contentEditable = true;
-      lineText.innerHTML = "";
-
-      newBlock.appendChild(cb);
-      newBlock.appendChild(lineText);
-      journalContent.insertBefore(newBlock, parent.nextSibling);
-      placeCaretAtStart(lineText);
-    } else {
-      newBlock.className = "line-text";
-      newBlock.contentEditable = true;
-      newBlock.innerHTML = "";
-
-      journalContent.insertBefore(newBlock, parent.nextSibling);
-      placeCaretAtStart(newBlock);
-    }
-
+    journalContent.insertBefore(newBlock, parent.nextSibling);
+    placeCaretAtStart(newBlock.querySelector(".line-text") || newBlock);
     saveContent();
+    return;
+  }
+
+  // COMMAND MODE (/)
+  if (e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    isCommandMode = true;
+    commandBuffer = "/";
+    window._targetBlock = parent;
+    openCommandPalette();
+    return;
+  }
+
+  // ESCAPE cancels command mode
+  if (e.key === "Escape" && isCommandMode) {
+    isCommandMode = false;
+    commandBuffer = "";
+    closeCommandPalette();
+    return;
   }
 });
+
 
   // ✅ Global shortcuts (moved here to fix journalContent reference error)
   document.addEventListener("keydown", (e) => {
@@ -1219,6 +1140,11 @@ if (e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey) {
     }
   });
   normalizeJournalContent();
+  if (journalContent.childNodes.length === 0) {
+  const line = createLineBlock("text");
+  journalContent.appendChild(line);
+  placeCaretAtStart(line);
+}
   if (journalContent.innerHTML.trim() === "") {
   const line = document.createElement("div");
   line.className = "line-text";
@@ -1337,36 +1263,22 @@ function applyCommand(cmd) {
   if (!parent) return;
 
   if (cmd === "/todo") {
-    const block = document.createElement("div");
-    block.className = "entry-line";
-
-    const cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.onchange = saveContent;
-
-    const text = document.createElement("div");
-    text.className = "line-text";
-    text.contentEditable = true;
-
-    block.appendChild(cb);
-    block.appendChild(text);
-    journalContent.replaceChild(block, parent);
-    placeCaretAtStart(text);
+    const newBlock = createLineBlock("checkbox");
+    journalContent.replaceChild(newBlock, parent);
+    placeCaretAtStart(newBlock.querySelector(".line-text"));
     saveContent();
   } else if (cmd === "/divider") {
     const div = document.createElement("hr");
     journalContent.insertBefore(div, parent.nextSibling);
     saveContent();
   } else if (cmd === "/list") {
-    const block = document.createElement("div");
-    block.className = "line-text";
-    block.contentEditable = true;
-    block.textContent = "- ";
-    journalContent.insertBefore(block, parent.nextSibling);
-    placeCaretAtStart(block);
+    const newBlock = createLineBlock("text", "- ");
+    journalContent.replaceChild(newBlock, parent);
+    placeCaretAtStart(newBlock);
     saveContent();
   }
 }
+
   function bindPopupKeys(popupId, onEnter, onEscape) {
   const popup = document.getElementById(popupId);
   const input = popup.querySelector('input');

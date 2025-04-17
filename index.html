@@ -405,9 +405,20 @@ function formatPrettyDate(dateStr) {
 }
 
 function highlightActive(slug) {
+  const today = getTodaySlug();
+  const yest = getTodaySlug(-1);
+  const tomo = getTodaySlug(1);
+
   document.querySelectorAll(".item").forEach(i => {
     const entry = i.dataset.entry;
-    i.classList.toggle("active", entry === slug);
+
+    const match =
+      (entry === slug) ||
+      (entry === "today" && slug === today) ||
+      (entry === "yesterday" && slug === yest) ||
+      (entry === "tomorrow" && slug === tomo);
+
+    i.classList.toggle("active", match);
   });
 }
 
@@ -425,24 +436,6 @@ function loadContent(mode, slug, label, url) {
   currentSlug = slug;
   document.getElementById("entry-title").textContent = label;
   document.getElementById("entry-date").textContent = (mode === "daily") ? formatPrettyDate(slug) : "";
-
-  function highlightActive(slug) {
-  const today = getTodaySlug();
-  const yest = getTodaySlug(-1);
-  const tomo = getTodaySlug(1);
-
-  document.querySelectorAll(".item").forEach(i => {
-    const entry = i.dataset.entry;
-
-    const match =
-      (entry === slug) ||
-      (entry === "today" && slug === today) ||
-      (entry === "yesterday" && slug === yest) ||
-      (entry === "tomorrow" && slug === tomo);
-
-    i.classList.toggle("active", match);
-  });
-}
 
   const content = document.getElementById("journal-content");
   const cached = localStorage.getItem(`bujocache-${mode}-${slug}`);

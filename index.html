@@ -359,7 +359,7 @@
           <div id="entry-date">MON, APR 14</div>
         </div>
       </div>
-      <div id="journal-content" class="notes" contenteditable="true"></div>
+      <div id="journal-content" class="notes"></div>
     </div>
   </div>
 
@@ -531,6 +531,7 @@ function addEntryLine(text = "") {
   txt.addEventListener("keydown", e => {
     if (e.key === "Enter") {
       e.preventDefault();
+      e.stopPropagation();
       const newLine = addEntryLine(); // ✅ this works now because addEntryLine is declared
       div.insertAdjacentElement("afterend", newLine);
       newLine.querySelector(".line-text").focus();

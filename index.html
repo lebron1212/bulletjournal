@@ -510,12 +510,22 @@ function formatPrettyDate(dateStr) {
   });
 }
 
+  let isCommandMode = false;
+let commandBuffer = "";
+
 
 function smoothEntryTransition(newHtml) {
   const content = document.getElementById("journal-content");
   content.style.opacity = 0;
   setTimeout(() => {
     content.innerHTML = newHtml;
+
+    // 🧼 Strip legacy/floating nodes
+    Array.from(content.childNodes).forEach(child => {
+      if (!(child.classList?.contains("entry-line") || child.classList?.contains("line-text"))) {
+        content.removeChild(child);
+      }
+    });
 
     // 🩹 Fix orphaned lines
     const orphanLines = content.querySelectorAll('.line-text:not(.entry-line .line-text)');
@@ -531,7 +541,7 @@ function smoothEntryTransition(newHtml) {
       wrapper.appendChild(cb);
       wrapper.appendChild(textDiv);
     });
-    
+
     pushUndoState();
     content.style.opacity = 1;
   }, 120);
@@ -893,8 +903,6 @@ function placeCaretAtEnd(node) {
 window.onload = () => {
   journalContent = document.getElementById("journal-content");
  journalContent.addEventListener("keydown", (e) => {
-  if (e.key !== "Enter") return;
-
   const sel = window.getSelection();
   if (!sel.rangeCount) return;
 
@@ -904,46 +912,42 @@ window.onload = () => {
   while (node && node !== journalContent && !node.classList.contains("line-text")) {
     node = node.parentNode;
   }
-
   if (!node) return;
 
   const parent = node.closest(".entry-line") || node;
 
-  // Wait for key to be processed so content is current
-  setTimeout(() => {
-    const textContent = node.textContent.trim();
+  // Slash activates command mode
+  if (e.key === "/") {
+    isCommandMode = true;
+    commandBuffer = "/";
+    return;
+  }
 
-    // Handle special shortcuts
-    if (textContent === "/todo" || textContent === "- [ ]") {
+  // If we're typing a command...
+  if (isCommandMode) {
+    if (e.key.length === 1 && !e.metaKey && !e.ctrlKey) {
+      commandBuffer += e.key;
+      return;
+    }
+
+    if (e.key === "Backspace") {
+      commandBuffer = commandBuffer.slice(0, -1);
+      if (commandBuffer.length <= 1) isCommandMode = false;
+      return;
+    }
+
+    if (e.key === "Enter") {
       e.preventDefault();
 
-      const checkboxBlock = document.createElement("div");
-      checkboxBlock.className = "entry-line";
+      // Interpret the command
+      const cmd = commandBuffer.trim().toLowerCase();
+      isCommandMode = false;
+      commandBuffer = "";
 
-      const cb = document.createElement("input");
-      cb.type = "checkbox";
-      cb.onchange = saveContent;
-
-      const lineText = document.createElement("div");
-      lineText.className = "line-text";
-      lineText.contentEditable = true;
-      lineText.innerHTML = "";
-
-      checkboxBlock.appendChild(cb);
-      checkboxBlock.appendChild(lineText);
-
-      journalContent.replaceChild(checkboxBlock, parent);
-      placeCaretAtStart(lineText);
-      saveContent();
-    } else {
-      // Normal Enter behavior
-      e.preventDefault();
-
-      const isInCheckbox = parent.classList.contains("entry-line");
-      const newBlock = document.createElement("div");
-
-      if (isInCheckbox) {
-        newBlock.className = "entry-line";
+      // Handle `/todo`
+      if (cmd === "/todo") {
+        const checkboxBlock = document.createElement("div");
+        checkboxBlock.className = "entry-line";
 
         const cb = document.createElement("input");
         cb.type = "checkbox";
@@ -954,24 +958,71 @@ window.onload = () => {
         lineText.contentEditable = true;
         lineText.innerHTML = "";
 
-        newBlock.appendChild(cb);
-        newBlock.appendChild(lineText);
-        journalContent.insertBefore(newBlock, parent.nextSibling);
-        placeCaretAtStart(lineText);
-      } else {
-        newBlock.className = "line-text";
-        newBlock.contentEditable = true;
-        newBlock.innerHTML = "";
+        checkboxBlock.appendChild(cb);
+        checkboxBlock.appendChild(lineText);
 
-        journalContent.insertBefore(newBlock, parent.nextSibling);
-        placeCaretAtStart(newBlock);
+        journalContent.replaceChild(checkboxBlock, parent);
+        placeCaretAtStart(lineText);
+        saveContent();
+        return;
       }
 
-      saveContent();
-    }
-  }, 0); // allow key event to finish
-});
+      // Unknown command — just insert a blank line
+      const newBlock = document.createElement("div");
+      newBlock.className = "line-text";
+      newBlock.contentEditable = true;
+      newBlock.innerHTML = "";
 
+      journalContent.insertBefore(newBlock, parent.nextSibling);
+      placeCaretAtStart(newBlock);
+      saveContent();
+      return;
+    }
+
+    // Cancel command mode
+    if (e.key === "Escape") {
+      isCommandMode = false;
+      commandBuffer = "";
+    }
+
+    return;
+  }
+
+  // Normal Enter logic (not command)
+  if (e.key === "Enter") {
+    e.preventDefault();
+
+    const isInCheckbox = parent.classList.contains("entry-line");
+    const newBlock = document.createElement("div");
+
+    if (isInCheckbox) {
+      newBlock.className = "entry-line";
+
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.onchange = saveContent;
+
+      const lineText = document.createElement("div");
+      lineText.className = "line-text";
+      lineText.contentEditable = true;
+      lineText.innerHTML = "";
+
+      newBlock.appendChild(cb);
+      newBlock.appendChild(lineText);
+      journalContent.insertBefore(newBlock, parent.nextSibling);
+      placeCaretAtStart(lineText);
+    } else {
+      newBlock.className = "line-text";
+      newBlock.contentEditable = true;
+      newBlock.innerHTML = "";
+
+      journalContent.insertBefore(newBlock, parent.nextSibling);
+      placeCaretAtStart(newBlock);
+    }
+
+    saveContent();
+  }
+});
 
   // ✅ Global shortcuts (moved here to fix journalContent reference error)
   document.addEventListener("keydown", (e) => {

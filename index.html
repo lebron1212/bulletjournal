@@ -64,6 +64,11 @@
       font-weight: 700;
     }
 
+    .line-text:not(.entry-line .line-text) {
+  display: block;
+  padding-left: 20px; /* visually align with checkbox blocks */
+}
+
     .item {
       font-size: 0.75rem;
       margin-bottom: 10px;
@@ -893,37 +898,40 @@ window.onload = () => {
     const currentBlock = range.startContainer.closest("div");
 
     if (e.key === "Enter") {
-      e.preventDefault();
+  e.preventDefault();
 
-      // SHIFT+ENTER → insert checkbox block
-      if (e.shiftKey) {
-        const checkboxDiv = document.createElement("div");
-        checkboxDiv.className = "entry-line";
+  const isShift = e.shiftKey;
 
-        const cb = document.createElement("input");
-        cb.type = "checkbox";
-        cb.onchange = saveContent;
+  const newBlock = document.createElement("div");
 
-        const text = document.createElement("div");
-        text.className = "line-text";
-        text.contentEditable = true;
-        text.innerHTML = "";
+  if (isShift) {
+    // SHIFT+ENTER → checkbox line
+    newBlock.className = "entry-line";
 
-        checkboxDiv.appendChild(cb);
-        checkboxDiv.appendChild(text);
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.onchange = saveContent;
 
-        journalContent.insertBefore(checkboxDiv, currentBlock.nextSibling);
-        placeCaretAtStart(text);
-      } else {
-        // ENTER → new regular block
-        const newDiv = document.createElement("div");
-        newDiv.innerHTML = "<br>";
-        journalContent.insertBefore(newDiv, currentBlock.nextSibling);
-        placeCaretAtStart(newDiv);
-      }
+    const text = document.createElement("div");
+    text.className = "line-text";
+    text.contentEditable = true;
+    text.innerHTML = "";
 
-      saveContent();
-    }
+    newBlock.appendChild(cb);
+    newBlock.appendChild(text);
+    journalContent.insertBefore(newBlock, currentBlock.nextSibling);
+    placeCaretAtStart(text);
+  } else {
+    // ENTER → plain line
+    newBlock.className = "line-text";
+    newBlock.contentEditable = true;
+    newBlock.innerHTML = "";
+    journalContent.insertBefore(newBlock, currentBlock.nextSibling);
+    placeCaretAtStart(newBlock);
+  }
+
+  saveContent();
+}
 
     if (e.key === "Backspace") {
       // Handle backspace at empty block

@@ -33,7 +33,6 @@
       flex-shrink: 0;
       overflow-y: auto;
       max-height: calc(100vh - 60px);
-      position: relative;
     }
 
     #journal-panel {
@@ -101,14 +100,14 @@
     }
 
     #calendar-btn {
-      position: absolute;
-      top: 14px;
-      left: 188px;
-      font-size: 1.2rem;
+      position: relative;
+      float: right;
+      font-size: 1rem;
       background: none;
       border: none;
       color: #eee;
       cursor: pointer;
+      margin-top: -6px;
     }
 
     .header {
@@ -148,7 +147,9 @@
       width: 16px;
       height: 16px;
       border: 1px solid #888;
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       position: relative;
       cursor: pointer;
     }
@@ -156,13 +157,13 @@
     .entry-line input[type="checkbox"]:checked::before {
       content: "X";
       color: #fff;
-      font-size: 0.7rem;
-      position: absolute;
-      left: 2px;
-      top: -1px;
+      font-size: 0.8rem;
+      font-weight: bold;
+      line-height: 1;
     }
 
     .entry-line .line-text {
+      font-size: 0.7rem;
       flex: 1;
       outline: none;
       min-height: 18px;
@@ -245,17 +246,11 @@
 
     @media (prefers-color-scheme: light) {
       html, body { color: #000; }
-      .entry-line input[type="checkbox"]:checked + .line-text {
+      .entry-line input[type="checkbox"] {
+        border-color: #333;
+      }
+      .entry-line input[type="checkbox"]:checked::before {
         color: #000;
-      }
-      .calendar-dot {
-        border-bottom: 2px solid #000 !important;
-      }
-    }
-
-    @media (prefers-color-scheme: dark) {
-      .calendar-dot {
-        border-bottom: 2px solid #fff !important;
       }
     }
 
@@ -278,16 +273,14 @@
   <div id="wrapper">
     <div class="panel">
       <div class="card" id="index-card">
-        <h2>INDEX
-          <button id="calendar-btn" title="Create new date">+</button>
+        <h2>INDEX 
+          <button id="calendar-btn" title="Open calendar">+</button>
         </h2>
         <div class="item" data-entry="yesterday">YESTERDAY</div>
         <div class="item" data-entry="today">TODAY</div>
         <div class="item" data-entry="tomorrow">TOMORROW</div>
 
-        <h2 style="margin-top: 18px;">RECENTS
-          <span id="recents-toggle" style="float: right; cursor: pointer;">▼</span>
-        </h2>
+        <h2 style="margin-top: 18px;">RECENTS <span id="recents-toggle" style="float: right; cursor: pointer;">▼</span></h2>
         <div id="recent-entries" style="display: block;"></div>
       </div>
 
@@ -325,7 +318,7 @@
     </div>
   </div>
 
-  <!-- Create Collection Popup -->
+  <!-- Collection Popups -->
   <div id="collection-popup" class="popup" style="display:none;">
     <h3>NEW COLLECTION</h3>
     <input id="new-collection-name" placeholder="Collection name" />
@@ -335,7 +328,6 @@
     </div>
   </div>
 
-  <!-- Rename Collection Popup -->
   <div id="rename-popup" class="popup" style="display:none;">
     <h3>RENAME COLLECTION</h3>
     <input id="rename-input" placeholder="New name" />
@@ -345,7 +337,6 @@
     </div>
   </div>
 
-  <!-- Delete Collection Popup -->
   <div id="delete-popup" class="popup" style="display:none;">
     <h3>DELETE COLLECTION</h3>
     <p>ARE YOU SURE YOU WANT TO DELETE THIS COLLECTION?</p>
@@ -366,51 +357,45 @@ let currentSlug = "";
 let recentEntries = [];
 let selectedCalendarDate = null;
 
+// === UTILS ===
 function getTodaySlug(offset = 0) {
   const d = new Date();
   d.setDate(d.getDate() + offset);
   return d.toISOString().slice(0, 10);
 }
-
 function encodeHTML(str) {
   return btoa(unescape(encodeURIComponent(str)));
 }
-
 function decodeHTML(str) {
   return decodeURIComponent(escape(atob(str)));
 }
-
 function extractVersion(html) {
   const match = html.match(/<!-- version:(.*?)-->/);
   return match ? new Date(match[1]) : new Date(0);
 }
-
 function updateStatus(text, syncing = false) {
   document.querySelector("#sync-status .label").textContent = text;
   document.querySelector("#sync-status .spinner").style.display = syncing ? "inline-block" : "none";
 }
-
 function formatPrettyDate(dateStr) {
   const d = new Date(dateStr);
   return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }).toUpperCase();
 }
 
+// === SIDEBAR HIGHLIGHT ===
 function highlightActive(slug) {
   document.querySelectorAll(".item").forEach(i => {
-    i.classList.toggle("active", i.dataset.entry === slug);
+    i.classList.remove("active");
+    const val = i.dataset.entry;
+    if (val === slug || (val === "today" && slug === getTodaySlug()) ||
+        (val === "yesterday" && slug === getTodaySlug(-1)) ||
+        (val === "tomorrow" && slug === getTodaySlug(1))) {
+      i.classList.add("active");
+    }
   });
 }
 
-function smoothEntryTransition(newHtml) {
-  const content = document.getElementById("journal-content");
-  content.style.opacity = 0;
-  setTimeout(() => {
-    content.innerHTML = newHtml;
-    ensureEditableLine();
-    content.style.opacity = 1;
-  }, 120);
-}
-
+// === JOURNAL LOADING ===
 function loadContent(mode, slug, label, url) {
   currentMode = mode;
   currentSlug = slug;
@@ -446,11 +431,49 @@ function loadContent(mode, slug, label, url) {
   }).catch(() => updateStatus("OFFLINE"));
 }
 
+// === ENTRY ANIMATION ===
+function smoothEntryTransition(newHtml) {
+  const content = document.getElementById("journal-content");
+  content.style.opacity = 0;
+  setTimeout(() => {
+    content.innerHTML = newHtml;
+    ensureEditableLine();
+    content.style.opacity = 1;
+  }, 100);
+}
+
+// === RECENTS ===
+function renderRecents() {
+  const box = document.getElementById("recent-entries");
+  box.innerHTML = "";
+  const today = getTodaySlug();
+  const yest = getTodaySlug(-1);
+  const tomo = getTodaySlug(1);
+  const collections = JSON.parse(localStorage.getItem("collections-list") || "[]");
+
+  recentEntries
+    .filter(slug => ![today, yest, tomo].includes(slug) && !collections.includes(slug))
+    .forEach(slug => {
+      const div = document.createElement("div");
+      div.className = "item";
+      div.dataset.entry = slug;
+      div.textContent = slug;
+      div.onclick = () => loadContent("daily", slug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${slug}.html`);
+      box.appendChild(div);
+    });
+}
+document.getElementById("recents-toggle").onclick = () => {
+  const box = document.getElementById("recent-entries");
+  const expanded = box.style.display !== "none";
+  box.style.display = expanded ? "none" : "block";
+  document.getElementById("recents-toggle").textContent = expanded ? "▶" : "▼";
+};
+
+// === TEXT + SYNC ===
 function ensureEditableLine() {
   const content = document.getElementById("journal-content");
   if (content.innerHTML.trim() === "") addEntryLine("Start writing...");
 }
-
 function addEntryLine(text = "") {
   const content = document.getElementById("journal-content");
   const div = document.createElement("div");
@@ -469,20 +492,17 @@ function addEntryLine(text = "") {
   div.appendChild(txt);
   content.appendChild(div);
 }
-
 function forceCheckboxAttrs() {
   const content = document.getElementById("journal-content");
   content.querySelectorAll('input[type="checkbox"]').forEach(cb => {
     cb.checked ? cb.setAttribute("checked", "checked") : cb.removeAttribute("checked");
   });
 }
-
 function saveLocal() {
   const content = document.getElementById("journal-content");
   const html = `<!-- version:${new Date().toISOString()} -->\n${content.innerHTML}`;
   localStorage.setItem(`bujocache-${currentMode}-${currentSlug}`, encodeHTML(html));
 }
-
 function syncRemote() {
   const content = document.getElementById("journal-content");
   const html = `<!-- version:${new Date().toISOString()} -->\n${content.innerHTML}`;
@@ -494,12 +514,10 @@ function syncRemote() {
   }).then(res => updateStatus(res.ok ? "SYNCED" : "NETLIFY ERROR"))
     .catch(() => updateStatus("SYNC FAILED"));
 }
-
 function debounceSync() {
   clearTimeout(window._syncTimeout);
   window._syncTimeout = setTimeout(syncRemote, 1000);
 }
-
 function saveContent() {
   forceCheckboxAttrs();
   saveLocal();
@@ -507,7 +525,7 @@ function saveContent() {
   pushUndoState();
 }
 
-// Undo / Redo
+// === UNDO / REDO ===
 let undoStack = [], redoStack = [];
 function pushUndoState() {
   const content = document.getElementById("journal-content");
@@ -515,7 +533,6 @@ function pushUndoState() {
   if (undoStack.length > 50) undoStack.shift();
   redoStack = [];
 }
-
 function undo() {
   const content = document.getElementById("journal-content");
   if (undoStack.length > 1) {
@@ -524,7 +541,6 @@ function undo() {
     saveContent();
   }
 }
-
 function redo() {
   const content = document.getElementById("journal-content");
   if (redoStack.length) {
@@ -534,7 +550,6 @@ function redo() {
     saveContent();
   }
 }
-
 document.addEventListener("keydown", e => {
   if ((e.metaKey || e.ctrlKey) && e.key === "b") {
     document.execCommand("bold"); e.preventDefault();
@@ -548,215 +563,6 @@ document.addEventListener("keydown", e => {
     redo(); e.preventDefault();
   }
 });
-
-// RECENTS
-function renderRecents() {
-  const box = document.getElementById("recent-entries");
-  box.innerHTML = "";
-  const today = getTodaySlug();
-  const yest = getTodaySlug(-1);
-  const tomo = getTodaySlug(1);
-  recentEntries.filter(slug => ![today, yest, tomo].includes(slug)).forEach(slug => {
-    const div = document.createElement("div");
-    div.className = "item";
-    div.dataset.entry = slug;
-    div.textContent = slug;
-    div.onclick = () => loadContent("daily", slug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${slug}.html`);
-    box.appendChild(div);
-  });
-}
-document.getElementById("recents-toggle").onclick = () => {
-  const box = document.getElementById("recent-entries");
-  const expanded = box.style.display !== "none";
-  box.style.display = expanded ? "none" : "block";
-  document.getElementById("recents-toggle").textContent = expanded ? "▶" : "▼";
-};
-
-// === COLLECTIONS
-function toggleCollectionPopup() {
-  document.getElementById("collection-popup").style.display = "flex";
-}
-function hideRenamePopup() {
-  document.getElementById("rename-popup").style.display = "none";
-}
-function hideDeletePopup() {
-  document.getElementById("delete-popup").style.display = "none";
-}
-function createCollection() {
-  const input = document.getElementById("new-collection-name");
-  const name = input.value.trim().toUpperCase().replace(/\s+/g, "-");
-  if (!name) return;
-  const html = `<!-- version:${new Date().toISOString()} -->\n<div class="entry-line"><input type="checkbox"><div class="line-text">New collection: ${name}</div></div>`;
-  fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ date: name, content: encodeHTML(html), mode: "collection" })
-  }).then(() => {
-    input.value = "";
-    document.getElementById("collection-popup").style.display = "none";
-    const updated = [name, ...new Set([name, ...JSON.parse(localStorage.getItem("collections-list") || "[]")])];
-    localStorage.setItem("collections-list", JSON.stringify(updated));
-    renderCollections(updated);
-  });
-}
-function confirmRename() {
-  const newName = document.getElementById("rename-input").value.trim().toUpperCase().replace(/\s+/g, "-");
-  if (!newName || !window._renameTarget) return;
-  fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ rename: window._renameTarget, to: newName, mode: "collection" })
-  }).then(() => {
-    hideRenamePopup();
-    const updated = JSON.parse(localStorage.getItem("collections-list") || "[]").map(s => s === window._renameTarget ? newName : s);
-    localStorage.setItem("collections-list", JSON.stringify(updated));
-    renderCollections(updated);
-  });
-}
-function confirmDelete() {
-  if (!window._deleteTarget) return;
-  fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ delete: window._deleteTarget, mode: "collection" })
-  }).then(() => {
-    hideDeletePopup();
-    const updated = JSON.parse(localStorage.getItem("collections-list") || "[]").filter(s => s !== window._deleteTarget);
-    localStorage.setItem("collections-list", JSON.stringify(updated));
-    renderCollections(updated);
-  });
-}
-function loadCollectionsList() {
-  const box = document.getElementById("collections-list");
-  const stored = localStorage.getItem("collections-list");
-  let slugs = stored ? JSON.parse(stored) : [];
-  renderCollections(slugs);
-  fetch("https://api.github.com/repos/lebron1212/bulletjournal/contents/journals/collections")
-    .then(res => res.ok ? res.json() : [])
-    .then(data => {
-      const remoteSlugs = data
-        .filter(i => i.name.startsWith("collection-") && i.name.endsWith(".html"))
-        .map(i => i.name.replace("collection-", "").replace(".html", ""));
-      localStorage.setItem("collections-list", JSON.stringify(remoteSlugs));
-      renderCollections(remoteSlugs);
-    });
-}
-function renderCollections(slugs) {
-  const box = document.getElementById("collections-list");
-  box.innerHTML = "";
-  slugs.forEach(slug => {
-    const div = document.createElement("div");
-    div.className = "item";
-    div.dataset.entry = slug;
-    div.textContent = slug;
-
-    const ctrl = document.createElement("div");
-    ctrl.className = "item-controls";
-
-    const rename = document.createElement("button");
-    rename.className = "icon-btn";
-    rename.innerText = "✎";
-    rename.onclick = e => {
-      e.stopPropagation();
-      window._renameTarget = slug;
-      document.getElementById("rename-input").value = slug;
-      document.getElementById("rename-popup").style.display = "flex";
-    };
-
-    const del = document.createElement("button");
-    del.className = "icon-btn";
-    del.innerText = "✕";
-    del.onclick = e => {
-      e.stopPropagation();
-      window._deleteTarget = slug;
-      document.getElementById("delete-popup").style.display = "flex";
-    };
-
-    ctrl.appendChild(rename);
-    ctrl.appendChild(del);
-    div.appendChild(ctrl);
-
-    div.onclick = () => {
-      loadContent("collection", slug, slug, `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/collections/collection-${slug}.html`);
-    };
-
-    box.appendChild(div);
-  });
-}
-
-// CALENDAR
-const calendarPopup = document.getElementById("calendar-popup");
-const calendarGrid = document.getElementById("calendar-grid");
-const calendarMonthLabel = document.getElementById("calendar-month");
-const calendarCreateBtn = document.getElementById("calendar-create");
-let calendarDate = new Date();
-
-function openCalendarPopup() {
-  calendarPopup.style.display = "flex";
-  calendarCreateBtn.disabled = true;
-  selectedCalendarDate = null;
-  renderCalendar();
-}
-function renderCalendar() {
-  const month = calendarDate.getMonth();
-  const year = calendarDate.getFullYear();
-  const firstDay = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const dots = getDotDaysForMonth(year, month);
-  calendarGrid.innerHTML = "";
-  calendarMonthLabel.textContent = `${calendarDate.toLocaleString('default', { month: 'long' })} ${year}`;
-  for (let i = 0; i < firstDay; i++) calendarGrid.appendChild(document.createElement("div"));
-  for (let d = 1; d <= daysInMonth; d++) {
-    const day = document.createElement("div");
-    day.textContent = d;
-    day.style.padding = "4px";
-    day.style.border = "1px solid #333";
-    day.style.textAlign = "center";
-    day.style.cursor = "pointer";
-    if (dots.has(d)) day.classList.add("calendar-dot");
-    day.onclick = () => {
-      selectedCalendarDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-      calendarCreateBtn.disabled = false;
-    };
-    calendarGrid.appendChild(day);
-  }
-}
-function getDotDaysForMonth(year, month) {
-  const dots = new Set();
-  Object.keys(localStorage).forEach(key => {
-    if (key.startsWith("bujocache-daily-")) {
-      const slug = key.split("bujocache-daily-")[1];
-      const d = new Date(slug);
-      if (d.getFullYear() === year && d.getMonth() === month) dots.add(d.getDate());
-    }
-  });
-  return dots;
-}
-document.getElementById("calendar-btn").onclick = openCalendarPopup;
-document.getElementById("prev-month").onclick = () => { calendarDate.setMonth(calendarDate.getMonth() - 1); renderCalendar(); };
-document.getElementById("next-month").onclick = () => { calendarDate.setMonth(calendarDate.getMonth() + 1); renderCalendar(); };
-calendarCreateBtn.onclick = () => {
-  if (!selectedCalendarDate) return;
-  calendarPopup.style.display = "none";
-  loadContent("daily", selectedCalendarDate, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${selectedCalendarDate}.html`);
-};
-
-// FINAL INIT
-window.onload = () => {
-  recentEntries = JSON.parse(localStorage.getItem("recent-entries") || "[]");
-  renderRecents();
-  loadCollectionsList();
-  const today = getTodaySlug();
-  const yest = getTodaySlug(-1);
-  const tomo = getTodaySlug(1);
-  document.querySelector('[data-entry="today"]').onclick = () =>
-    loadContent("daily", today, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${today}.html`);
-  document.querySelector('[data-entry="yesterday"]').onclick = () =>
-    loadContent("daily", yest, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${yest}.html`);
-  document.querySelector('[data-entry="tomorrow"]').onclick = () =>
-    loadContent("daily", tomo, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${tomo}.html`);
-  loadContent("daily", today, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${today}.html`);
-};
 </script>
 </body>
 </html>

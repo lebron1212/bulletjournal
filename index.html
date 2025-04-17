@@ -223,21 +223,29 @@
     }
 
     .popup {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%,-50%);
-      background: #111;
-      border: 1px solid #444;
-      padding: 20px;
-      width: 280px;
-      max-width: 95vw;
-      z-index: 1000;
-      border-radius: 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%,-50%);
+  background: #222;
+  border: 1px solid #666;
+  padding: 20px;
+  width: 280px;
+  max-width: 95vw;
+  z-index: 1000;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: #eee;
+}
+
+.popup input,
+.popup-buttons button {
+  background: #333;
+  color: #eee;
+  border-color: #888;
+}
 
     .popup h3 {
       font-size: 0.75rem;
@@ -488,43 +496,32 @@ function makeAllLinesEditable() {
       txt.oninput = null;
       txt.addEventListener("input", saveContent);
 
-      let lastEnterTime = 0;
-
       txt.addEventListener("keydown", e => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          e.stopPropagation();
+  if (e.key === "Enter") {
+    e.preventDefault();
 
-          const now = Date.now();
-          const timeDiff = now - lastEnterTime;
-          lastEnterTime = now;
+    const newDiv = document.createElement("div");
+    newDiv.className = "entry-line";
 
-          const newDiv = document.createElement("div");
-          newDiv.className = "entry-line";
+    const newText = document.createElement("div");
+    newText.className = "line-text";
+    newText.contentEditable = true;
 
-          const newText = document.createElement("div");
-          newText.className = "line-text";
-          newText.contentEditable = true;
+    const isCheckboxLine = div.querySelector("input[type='checkbox']");
 
-          const isCheckboxLine = div.querySelector("input[type='checkbox']");
+    if (isCheckboxLine) {
+      const newCB = document.createElement("input");
+      newCB.type = "checkbox";
+      newCB.onchange = saveContent;
+      newDiv.appendChild(newCB);
+    }
 
-          if (isCheckboxLine && timeDiff < 400) {
-            newDiv.appendChild(newText);
-          } else if (isCheckboxLine) {
-            const newCB = document.createElement("input");
-            newCB.type = "checkbox";
-            newCB.onchange = saveContent;
-            newDiv.appendChild(newCB);
-            newDiv.appendChild(newText);
-          } else {
-            newDiv.appendChild(newText);
-          }
-
-          div.insertAdjacentElement("afterend", newDiv);
-          makeAllLinesEditable();
-          newText.focus();
-          saveContent();
-        }
+    newDiv.appendChild(newText);
+    div.insertAdjacentElement("afterend", newDiv);
+    makeAllLinesEditable();
+    newText.focus();
+    saveContent();
+  }
 
         if (e.key === "Backspace" && txt.textContent.trim() === "") {
           e.preventDefault();
@@ -799,9 +796,11 @@ calendarCreateBtn.onclick = () => {
   loadContent("daily", selectedCalendarDate, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${selectedCalendarDate}.html`);
 };
 
-  function toggleCollectionPopup() {
-  document.getElementById("collection-popup").style.display = "flex";
+function toggleCollectionPopup() {
+  const popup = document.getElementById("collection-popup");
+  popup.style.display = (popup.style.display === "flex") ? "none" : "flex";
 }
+
 
 function hideRenamePopup() {
   document.getElementById("rename-popup").style.display = "none";

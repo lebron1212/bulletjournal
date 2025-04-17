@@ -893,27 +893,27 @@ window.onload = () => {
   journalContent.addEventListener("keydown", (e) => {
   if (e.key !== "Enter") return;
 
+  e.preventDefault(); // stop default enter behavior
+
   const sel = window.getSelection();
   if (!sel.rangeCount) return;
 
   const range = sel.getRangeAt(0);
-  let currentBlock = range.startContainer;
+  let node = range.startContainer;
 
-  // Walk up to the closest block
-  while (currentBlock && currentBlock !== journalContent && !currentBlock.classList.contains("entry-line") && !currentBlock.classList.contains("line-text")) {
-    currentBlock = currentBlock.parentElement;
+  // Walk up to the containing block
+  while (node && node !== journalContent && !node.classList.contains("entry-line") && !node.classList.contains("line-text")) {
+    node = node.parentNode;
   }
 
-  // Still not valid? bail.
-  if (!currentBlock || currentBlock === journalContent) return;
-
-  e.preventDefault();
-
   const isShift = e.shiftKey;
-  const newBlock = document.createElement("div");
+  const isInCheckbox = node?.classList.contains("entry-line");
 
-  if (isShift) {
-    // ✅ SHIFT + ENTER = checkbox line
+  let newBlock;
+
+  if (isShift || isInCheckbox) {
+    // ✅ Create a new checkbox block
+    newBlock = document.createElement("div");
     newBlock.className = "entry-line";
 
     const cb = document.createElement("input");
@@ -927,15 +927,17 @@ window.onload = () => {
 
     newBlock.appendChild(cb);
     newBlock.appendChild(text);
-    journalContent.insertBefore(newBlock, currentBlock.closest(".entry-line")?.nextSibling || currentBlock.nextSibling);
+
+    journalContent.insertBefore(newBlock, node.nextSibling);
     placeCaretAtStart(text);
   } else {
-    // ✅ ENTER = plain line
+    // ✅ Create a new plain text block
+    newBlock = document.createElement("div");
     newBlock.className = "line-text";
     newBlock.contentEditable = true;
     newBlock.innerHTML = "";
 
-    journalContent.insertBefore(newBlock, currentBlock.closest(".entry-line")?.nextSibling || currentBlock.nextSibling);
+    journalContent.insertBefore(newBlock, node.nextSibling);
     placeCaretAtStart(newBlock);
   }
 

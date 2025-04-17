@@ -1,19 +1,18 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>Bullet Journal</title>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <style>
-    *, ::before, ::after { box-sizing: border-box; }
+    * { box-sizing: border-box; }
     html, body {
       font-family: 'IBM Plex Mono', monospace;
       margin: 0;
       padding: 0;
       height: 100%;
-      width: 100%;
       background: transparent;
       color: #eee;
       text-transform: uppercase;
@@ -24,48 +23,37 @@
     #wrapper {
       display: flex;
       flex-direction: row;
-      padding: 40px 20px;
-      width: 100%;
-      gap: 32px;
       height: 100%;
-    }
-
-    @media (max-width: 700px) {
-      #wrapper {
-        flex-direction: column;
-        padding: 20px 16px;
-      }
-      .panel {
-        width: 100%;
-        margin-bottom: 20px;
-        padding: 16px;
-      }
-      #journal-panel {
-        max-width: 100%;
-        padding: 20px;
-      }
+      width: 100%;
+      padding: 32px 20px;
+      gap: 32px;
     }
 
     .panel {
-      width: 220px;
+      width: 240px;
       flex-shrink: 0;
-      padding: 28px;
       overflow-y: auto;
       max-height: calc(100vh - 60px);
     }
 
+    #journal-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
     .card {
-      background: none;
-      border: 1px solid #333;
+      border: 1px solid #444;
       border-radius: 12px;
-      margin-bottom: 20px;
-      padding: 18px 16px;
-      position: relative;
+      margin-bottom: 24px;
+      padding: 20px;
+      background: none;
     }
 
     .card h2 {
       font-size: 0.75rem;
-      margin: 0 0 12px;
+      margin: 0 0 16px;
       border-bottom: 1px solid #444;
       padding-bottom: 6px;
       font-weight: 700;
@@ -73,13 +61,11 @@
 
     .item {
       font-size: 0.75rem;
-      letter-spacing: 0.03em;
-      cursor: pointer;
-      margin-bottom: 8px;
-      transition: opacity 0.2s;
+      margin-bottom: 10px;
       color: #888;
       display: flex;
       justify-content: space-between;
+      cursor: pointer;
     }
 
     .item.active {
@@ -90,28 +76,90 @@
     .item-controls {
       display: flex;
       gap: 6px;
-      font-size: 0.65rem;
     }
 
     .icon-btn {
       border: none;
       background: none;
-      color: #999;
+      color: #aaa;
       cursor: pointer;
-      padding: 0 4px;
+      font-size: 0.7rem;
+      padding: 0;
     }
 
-    .icon-btn:hover { color: #fff; }
+    .icon-btn:hover {
+      color: #fff;
+    }
 
     .add-collection-link {
-      font-size: 0.65rem;
-      font-weight: 700;
-      letter-spacing: 0.15em;
-      margin-top: -9px;
-      margin-bottom: 8px;
-      cursor: pointer;
-      text-decoration: none;
+      font-size: 0.7rem;
+      margin-top: -6px;
+      margin-bottom: 10px;
       display: inline-block;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    #calendar-btn {
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      font-size: 1.2rem;
+      background: none;
+      border: none;
+      color: #eee;
+      cursor: pointer;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    #entry-title {
+      font-size: 0.9rem;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+
+    #entry-date {
+      font-size: 0.7rem;
+      color: #aaa;
+    }
+
+    #journal-content {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 6px;
+    }
+
+    .entry-line {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .entry-line .drag-handle {
+      font-size: 1rem;
+      cursor: move;
+      user-select: none;
+      opacity: 0.4;
+    }
+
+    .entry-line input[type="checkbox"] {
+      transform: scale(1.2);
+      cursor: pointer;
+    }
+
+    .entry-line .line-text {
+      flex: 1;
+      outline: none;
+      min-height: 18px;
+      padding: 2px 0;
+      word-break: break-word;
     }
 
     .popup {
@@ -120,13 +168,12 @@
       left: 50%;
       transform: translate(-50%,-50%);
       background: #111;
-      padding: 20px;
       border: 1px solid #444;
-      border-radius: 12px;
-      z-index: 1002;
-      color: #fff;
+      padding: 20px;
       width: 280px;
-      max-width: 90vw;
+      max-width: 95vw;
+      z-index: 1000;
+      border-radius: 10px;
       display: flex;
       flex-direction: column;
       gap: 12px;
@@ -139,34 +186,30 @@
 
     .popup p {
       font-size: 0.65rem;
-      line-height: 1.4;
       margin: 0;
+      line-height: 1.4;
     }
 
     .popup input {
-      width: 100%;
       padding: 6px;
       font-family: 'IBM Plex Mono', monospace;
       background: none;
       border: 1px solid #444;
       color: #fff;
       font-size: 0.75rem;
-      margin: 0;
+      width: 100%;
     }
 
     .popup-buttons {
       display: flex;
-      justify-content: space-between;
       gap: 8px;
     }
 
     .popup-buttons button {
       flex: 1;
       padding: 6px;
-      font-size: 0.65rem;
-      text-transform: uppercase;
-      font-weight: 700;
-      letter-spacing: 0.08em;
+      font-size: 0.7rem;
+      font-weight: bold;
       border-radius: 6px;
       background: none;
       color: #fff;
@@ -178,47 +221,34 @@
       background: #222;
     }
 
-    #calendar-btn {
-      position: absolute;
-      top: 10px;
-      right: 12px;
-      font-size: 1.2rem;
-      background: none;
-      border: none;
-      color: #eee;
-      cursor: pointer;
+    #sync-status {
+      position: fixed;
+      bottom: 12px;
+      left: 20px;
+      font-size: 0.65rem;
+      opacity: 0.8;
     }
 
-    @media (prefers-color-scheme: light) {
-      html, body {
-        background: transparent;
-        color: #000;
+    @media (max-width: 700px) {
+      #wrapper {
+        flex-direction: column;
+        padding: 20px 14px;
+        gap: 20px;
       }
-      .card, .panel, .popup-buttons button {
-        border-color: #ccc;
-        color: #000;
+      .panel {
+        width: 100%;
       }
-      .item { color: #444; }
-      .item.active { color: #000; font-weight: bold; }
-      .icon-btn { color: #666; }
-      .icon-btn:hover { color: #000; }
-      .popup {
-        background: #fff;
-        color: #000;
-        border-color: #aaa;
+      #journal-panel {
+        min-height: 300px;
       }
-      .popup input, .popup-buttons button {
-        color: #111;
-        border-color: #aaa;
-        background: none;
+      .entry-line .drag-handle {
+        display: none;
       }
-      #calendar-btn { color: #000; }
     }
   </style>
 </head>
 <body>
   <div id="wrapper">
-    <!-- Sidebar -->
     <div class="panel">
       <div class="card" id="index-card">
         <h2>INDEX</h2>
@@ -234,25 +264,13 @@
       <div id="collections-card" class="card">
         <h2>COLLECTIONS</h2>
         <span class="add-collection-link" onclick="toggleCollectionPopup()">+ ADD</span>
-
-        <!-- Popup: Create Collection -->
-        <div id="collection-popup" class="popup" style="display:none;">
-          <h3>NEW COLLECTION</h3>
-          <input id="new-collection-name" placeholder="Collection name" />
-          <div class="popup-buttons">
-            <button onclick="createCollection()">SAVE</button>
-            <button onclick="toggleCollectionPopup()">CANCEL</button>
-          </div>
-        </div>
-
         <div id="collections-list"></div>
       </div>
     </div>
 
-    <!-- Journal Panel -->
-    <div id="journal-panel" class="card" style="flex: 1; display: flex; flex-direction: column;">
+    <div id="journal-panel" class="card">
       <div class="header">
-        <div style="display: flex; flex-direction: column;">
+        <div>
           <div id="entry-title">DAILY LOG</div>
           <div id="entry-date">MON, APR 14</div>
         </div>
@@ -262,23 +280,35 @@
     </div>
   </div>
 
-  <!-- Popup: Calendar Date Selector -->
-  <div id="calendar-popup" class="popup" style="display:none;">
+  <!-- Calendar Popup -->
+  <div id="calendar-popup" class="popup" style="display: none;">
     <h3>DATE INPUT</h3>
     <p>PLEASE SELECT A DATE TO CREATE OR LOAD</p>
-    <div id="calendar-header" style="display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; margin-bottom: 10px;">
+    <div id="calendar-header" style="display: flex; justify-content: space-between; align-items: center;">
       <button id="prev-month">&#8592;</button>
       <span id="calendar-month"></span>
       <button id="next-month">&#8594;</button>
     </div>
-    <div id="calendar-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 12px;"></div>
-    <div class="popup-buttons calendar-popup-buttons">
-      <button id="calendar-create" disabled>CREATE</button>
+    <div id="calendar-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin: 12px 0;"></div>
+    <div class="popup-buttons">
+      <button id="calendar-create" disabled>GO</button>
       <button onclick="calendarPopup.style.display='none'">CANCEL</button>
     </div>
   </div>
 
-  <!-- Popup: Rename Collection -->
+  <!-- Create, Rename, Delete Collection Popups will be in Part 2 -->
+
+  <!-- Create Collection Popup -->
+  <div id="collection-popup" class="popup" style="display:none;">
+    <h3>NEW COLLECTION</h3>
+    <input id="new-collection-name" placeholder="Collection name" />
+    <div class="popup-buttons">
+      <button onclick="createCollection()">SAVE</button>
+      <button onclick="toggleCollectionPopup()">CANCEL</button>
+    </div>
+  </div>
+
+  <!-- Rename Collection Popup -->
   <div id="rename-popup" class="popup" style="display:none;">
     <h3>RENAME COLLECTION</h3>
     <input id="rename-input" placeholder="New name" />
@@ -288,7 +318,7 @@
     </div>
   </div>
 
-  <!-- Popup: Delete Collection -->
+  <!-- Delete Collection Popup -->
   <div id="delete-popup" class="popup" style="display:none;">
     <h3>DELETE COLLECTION</h3>
     <p>ARE YOU SURE YOU WANT TO DELETE THIS COLLECTION?</p>
@@ -299,26 +329,17 @@
   </div>
 
   <!-- Sync Status -->
-  <div id="sync-status" style="position: fixed; bottom: 10px; left: 20px; font-size: 0.65rem; opacity: 0.8;">
+  <div id="sync-status">
     <span class="spinner" style="display:none;">⏳</span>
     <span class="label">SYNCED</span>
   </div>
-<script>
-const content = document.getElementById("journal-content");
-const title = document.getElementById("entry-title");
-const dateLabel = document.getElementById("entry-date");
-const calendarPopup = document.getElementById("calendar-popup");
-const calendarGrid = document.getElementById("calendar-grid");
-const calendarMonthLabel = document.getElementById("calendar-month");
-const calendarCreateBtn = document.getElementById("calendar-create");
 
+<script>
 let currentMode = "daily";
-let currentSlug = new Date().toISOString().slice(0, 10);
-let recentEntries = [];
+let currentSlug = "";
 let dragMode = false;
-let undoStack = [], redoStack = [];
+let recentEntries = [];
 let selectedCalendarDate = null;
-let calendarDate = new Date();
 
 // === UTILS ===
 function getTodaySlug(offset = 0) {
@@ -326,105 +347,38 @@ function getTodaySlug(offset = 0) {
   d.setDate(d.getDate() + offset);
   return d.toISOString().slice(0, 10);
 }
-
 function encodeHTML(str) {
   return btoa(unescape(encodeURIComponent(str)));
 }
-
 function decodeHTML(str) {
   return decodeURIComponent(escape(atob(str)));
 }
-
 function extractVersion(html) {
   const match = html.match(/<!-- version:(.*?)-->/);
   return match ? new Date(match[1]) : new Date(0);
 }
-
 function updateStatus(text, syncing = false) {
   document.querySelector("#sync-status .label").textContent = text;
   document.querySelector("#sync-status .spinner").style.display = syncing ? "inline-block" : "none";
 }
-
 function formatPrettyDate(dateStr) {
   const d = new Date(dateStr);
   return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }).toUpperCase();
 }
 
-function forceCheckboxAttrs() {
-  content.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-    cb.checked ? cb.setAttribute("checked", "checked") : cb.removeAttribute("checked");
-  });
-}
-
-function ensureEditableLine() {
-  if (content.innerHTML.trim() === "") addEntryLine("Start writing...");
-}
-
-function addEntryLine(text = "") {
-  const div = document.createElement("div");
-  div.className = "entry-line";
-  if (dragMode) div.classList.add("drag-enabled");
-
-  const drag = document.createElement("div");
-  drag.className = "drag-handle";
-  drag.textContent = "☰";
-
-  const cb = document.createElement("input");
-  cb.type = "checkbox";
-  cb.onchange = saveContent;
-
-  const txt = document.createElement("div");
-  txt.className = "line-text";
-  txt.contentEditable = !dragMode;
-  txt.innerHTML = text;
-
-  div.appendChild(drag);
-  div.appendChild(cb);
-  div.appendChild(txt);
-  content.appendChild(div);
-}
-
-// === SYNCING ===
-function saveLocal() {
-  const html = `<!-- version:${new Date().toISOString()} -->\n${content.innerHTML}`;
-  localStorage.setItem(`bujocache-${currentMode}-${currentSlug}`, encodeHTML(html));
-}
-
-function syncRemote() {
-  const html = `<!-- version:${new Date().toISOString()} -->\n${content.innerHTML}`;
-  updateStatus("SYNCING...", true);
-  fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ date: currentSlug, content: encodeHTML(html), mode: currentMode })
-  }).then(res => updateStatus(res.ok ? "SYNCED" : "NETLIFY ERROR"))
-    .catch(() => updateStatus("SYNC FAILED"));
-}
-
-function debounceSync() {
-  clearTimeout(window._syncTimeout);
-  window._syncTimeout = setTimeout(syncRemote, 1000);
-}
-
-function saveContent() {
-  forceCheckboxAttrs();
-  saveLocal();
-  debounceSync();
-}
-
-// === LOAD / SWITCH ENTRIES ===
+// === SIDEBAR ACTIVE LOGIC ===
 function highlightActive(slug) {
   document.querySelectorAll(".item").forEach(i => {
-    const isMatch = i.dataset.entry === slug;
-    i.classList.toggle("active", isMatch);
+    i.classList.toggle("active", i.dataset.entry === slug);
   });
 }
 
+// === CONTENT LOADING ===
 function loadContent(mode, slug, label, url) {
   currentMode = mode;
   currentSlug = slug;
-  title.textContent = label;
-  dateLabel.textContent = (mode === "daily") ? formatPrettyDate(slug) : "";
+  document.getElementById("entry-title").textContent = label;
+  document.getElementById("entry-date").textContent = (mode === "daily") ? formatPrettyDate(slug) : "";
   highlightActive(slug);
 
   const today = getTodaySlug();
@@ -437,6 +391,7 @@ function loadContent(mode, slug, label, url) {
     renderRecents();
   }
 
+  const content = document.getElementById("journal-content");
   const cached = localStorage.getItem(`bujocache-${mode}-${slug}`);
   const cachedHtml = cached ? decodeHTML(cached) : "";
   const cachedVer = extractVersion(cachedHtml);
@@ -455,7 +410,7 @@ function loadContent(mode, slug, label, url) {
   }).catch(() => updateStatus("OFFLINE"));
 }
 
-// === RECENTS LOGIC ===
+// === RECENTS ===
 function renderRecents() {
   const box = document.getElementById("recent-entries");
   box.innerHTML = "";
@@ -477,23 +432,18 @@ document.getElementById("recents-toggle").onclick = () => {
   box.style.display = expanded ? "none" : "block";
   document.getElementById("recents-toggle").textContent = expanded ? "▶" : "▼";
 };
-// === Continue from 479 ===
 
-// === Collection Utilities ===
+// === COLLECTION CRUD ===
 function toggleCollectionPopup() {
   const popup = document.getElementById("collection-popup");
   popup.style.display = popup.style.display === "none" ? "flex" : "none";
 }
-
 function hideRenamePopup() {
   document.getElementById("rename-popup").style.display = "none";
 }
-
 function hideDeletePopup() {
   document.getElementById("delete-popup").style.display = "none";
 }
-
-// === Create Collection ===
 function createCollection() {
   const input = document.getElementById("new-collection-name");
   const name = input.value.trim().toUpperCase().replace(/\s+/g, "-");
@@ -511,7 +461,6 @@ function createCollection() {
     renderCollections(updated);
   });
 }
-// === Rename Collection ===
 function confirmRename() {
   const newName = document.getElementById("rename-input").value.trim().toUpperCase().replace(/\s+/g, "-");
   if (!newName || !window._renameTarget) return;
@@ -526,8 +475,6 @@ function confirmRename() {
     renderCollections(updated);
   });
 }
-
-// === Delete Collection ===
 function confirmDelete() {
   if (!window._deleteTarget) return;
   fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
@@ -541,16 +488,13 @@ function confirmDelete() {
     renderCollections(updated);
   });
 }
-// === Load Collection List from Cache + GitHub
 function loadCollectionsList() {
   const box = document.getElementById("collections-list");
   const stored = localStorage.getItem("collections-list");
   let slugs = stored ? JSON.parse(stored) : [];
 
-  // Show cached list first
   renderCollections(slugs);
 
-  // Refresh from GitHub
   fetch("https://api.github.com/repos/lebron1212/bulletjournal/contents/journals/collections")
     .then(res => res.ok ? res.json() : [])
     .then(data => {
@@ -561,8 +505,6 @@ function loadCollectionsList() {
       renderCollections(remoteSlugs);
     });
 }
-
-// === Render Collections List
 function renderCollections(slugs) {
   const box = document.getElementById("collections-list");
   box.innerHTML = "";
@@ -605,26 +547,225 @@ function renderCollections(slugs) {
     box.appendChild(div);
   });
 }
+</script>
+<script>
+const content = document.getElementById("journal-content");
 
-// === Recents Toggle ===
-document.getElementById("recents-toggle").onclick = () => {
-  const box = document.getElementById("recent-entries");
-  box.style.display = box.style.display === "none" ? "block" : "none";
+// === JOURNAL ENTRY UTILITIES ===
+function ensureEditableLine() {
+  if (content.innerHTML.trim() === "") addEntryLine("Start writing...");
+}
+function forceCheckboxAttrs() {
+  content.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.checked ? cb.setAttribute("checked", "checked") : cb.removeAttribute("checked");
+  });
+}
+function addEntryLine(text = "") {
+  const div = document.createElement("div");
+  div.className = "entry-line";
+  if (dragMode) div.classList.add("drag-enabled");
+
+  const drag = document.createElement("div");
+  drag.className = "drag-handle";
+  drag.textContent = "☰";
+
+  const cb = document.createElement("input");
+  cb.type = "checkbox";
+  cb.onchange = saveContent;
+
+  const txt = document.createElement("div");
+  txt.className = "line-text";
+  txt.contentEditable = !dragMode;
+  txt.innerHTML = text;
+
+  div.appendChild(drag);
+  div.appendChild(cb);
+  div.appendChild(txt);
+  content.appendChild(div);
+}
+
+// === SYNC ===
+function saveLocal() {
+  const html = `<!-- version:${new Date().toISOString()} -->\n${content.innerHTML}`;
+  localStorage.setItem(`bujocache-${currentMode}-${currentSlug}`, encodeHTML(html));
+}
+function syncRemote() {
+  const html = `<!-- version:${new Date().toISOString()} -->\n${content.innerHTML}`;
+  updateStatus("SYNCING...", true);
+  fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ date: currentSlug, content: encodeHTML(html), mode: currentMode })
+  }).then(res => updateStatus(res.ok ? "SYNCED" : "NETLIFY ERROR"))
+    .catch(() => updateStatus("SYNC FAILED"));
+}
+function debounceSync() {
+  clearTimeout(window._syncTimeout);
+  window._syncTimeout = setTimeout(syncRemote, 1000);
+}
+function saveContent() {
+  forceCheckboxAttrs();
+  saveLocal();
+  debounceSync();
+  pushUndoState();
+}
+
+// === DRAG MODE ===
+let sortable = null;
+document.getElementById("dragToggleBtn").onclick = () => {
+  dragMode = !dragMode;
+  content.querySelectorAll(".entry-line").forEach(div => {
+    const txt = div.querySelector(".line-text");
+    txt.contentEditable = !dragMode;
+    div.classList.toggle("drag-enabled", dragMode);
+  });
+
+  if (dragMode && !sortable) {
+    sortable = new Sortable(content, {
+      animation: 150,
+      handle: ".drag-handle",
+      onEnd: () => {
+        saveContent();
+      }
+    });
+  } else if (!dragMode && sortable) {
+    sortable.destroy();
+    sortable = null;
+  }
 };
 
-// === Final Init ===
-window.onload = () => {
-  recentEntries = JSON.parse(localStorage.getItem("recent-entries") || "[]").filter(slug => {
-    const isDate = /^\d{4}-\d{2}-\d{2}$/.test(slug);
-    const today = getTodaySlug();
-    const yest = getTodaySlug(-1);
-    const tomo = getTodaySlug(1);
-    return isDate && slug !== today && slug !== yest && slug !== tomo;
+// === UNDO / REDO ===
+let undoStack = [], redoStack = [];
+function pushUndoState() {
+  undoStack.push(content.innerHTML);
+  if (undoStack.length > 50) undoStack.shift();
+  redoStack = [];
+}
+function undo() {
+  if (undoStack.length > 1) {
+    redoStack.push(undoStack.pop());
+    content.innerHTML = undoStack[undoStack.length - 1];
+    saveContent();
+  }
+}
+function redo() {
+  if (redoStack.length) {
+    const state = redoStack.pop();
+    undoStack.push(state);
+    content.innerHTML = state;
+    saveContent();
+  }
+}
+
+// === KEYBOARD SHORTCUTS ===
+document.addEventListener("keydown", e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === "b") {
+    document.execCommand("bold"); e.preventDefault();
+  } else if ((e.metaKey || e.ctrlKey) && e.key === "i") {
+    document.execCommand("italic"); e.preventDefault();
+  } else if ((e.metaKey || e.ctrlKey) && e.key === "u") {
+    document.execCommand("underline"); e.preventDefault();
+  } else if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
+    undo(); e.preventDefault();
+  } else if ((e.metaKey || e.ctrlKey) && (e.key === "Z" || (e.shiftKey && e.key === "z"))) {
+    redo(); e.preventDefault();
+  }
+});
+
+// === CALENDAR LOGIC ===
+const calendarPopup = document.getElementById("calendar-popup");
+const calendarGrid = document.getElementById("calendar-grid");
+const calendarMonthLabel = document.getElementById("calendar-month");
+const calendarCreateBtn = document.getElementById("calendar-create");
+
+let calendarDate = new Date();
+
+function openCalendarPopup() {
+  calendarPopup.style.display = "flex";
+  calendarCreateBtn.disabled = true;
+  selectedCalendarDate = null;
+  renderCalendar();
+}
+function renderCalendar() {
+  const month = calendarDate.getMonth();
+  const year = calendarDate.getFullYear();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const dots = getDotDaysForMonth(year, month);
+  calendarGrid.innerHTML = "";
+
+  calendarMonthLabel.textContent = `${calendarDate.toLocaleString('default', { month: 'long' })} ${year}`;
+
+  for (let i = 0; i < firstDay; i++) {
+    const blank = document.createElement("div");
+    calendarGrid.appendChild(blank);
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const day = document.createElement("div");
+    day.textContent = d;
+    day.style.padding = "4px";
+    day.style.border = "1px solid #333";
+    day.style.textAlign = "center";
+    day.style.cursor = "pointer";
+    day.onclick = () => {
+      selectedCalendarDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      calendarCreateBtn.disabled = false;
+    };
+    if (dots.has(d)) {
+      day.style.borderBottom = "2px solid #0ff";
+    }
+    calendarGrid.appendChild(day);
+  }
+}
+function getDotDaysForMonth(year, month) {
+  const dots = new Set();
+  Object.keys(localStorage).forEach(key => {
+    if (key.startsWith("bujocache-daily-")) {
+      const slug = key.split("bujocache-daily-")[1];
+      const d = new Date(slug);
+      if (d.getFullYear() === year && d.getMonth() === month) {
+        dots.add(d.getDate());
+      }
+    }
   });
+  return dots;
+}
+document.getElementById("calendar-btn").onclick = openCalendarPopup;
+document.getElementById("prev-month").onclick = () => {
+  calendarDate.setMonth(calendarDate.getMonth() - 1);
+  renderCalendar();
+};
+document.getElementById("next-month").onclick = () => {
+  calendarDate.setMonth(calendarDate.getMonth() + 1);
+  renderCalendar();
+};
+calendarCreateBtn.onclick = () => {
+  if (!selectedCalendarDate) return;
+  calendarPopup.style.display = "none";
+  loadContent("daily", selectedCalendarDate, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${selectedCalendarDate}.html`);
+};
+
+// === FINAL INIT ===
+window.onload = () => {
+  recentEntries = JSON.parse(localStorage.getItem("recent-entries") || "[]");
   renderRecents();
   loadCollectionsList();
-  const slug = getTodaySlug();
-  loadContent("daily", slug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${slug}.html`);
+
+  const today = getTodaySlug();
+  const yest = getTodaySlug(-1);
+  const tomo = getTodaySlug(1);
+
+  document.querySelector('[data-entry="today"]').onclick = () =>
+    loadContent("daily", today, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${today}.html`);
+
+  document.querySelector('[data-entry="yesterday"]').onclick = () =>
+    loadContent("daily", yest, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${yest}.html`);
+
+  document.querySelector('[data-entry="tomorrow"]').onclick = () =>
+    loadContent("daily", tomo, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${tomo}.html`);
+
+  loadContent("daily", today, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${today}.html`);
 };
 </script>
 </body>

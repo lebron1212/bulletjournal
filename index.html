@@ -984,7 +984,7 @@ let parent = node.closest(".entry-line") || node;
   commandBuffer = "/";
   window._targetBlock = parent;
   console.log("🟢 Command mode activated at", parent);
-  openCommandPalette(e.clientX, e.clientY);
+  openCommandPalette();
   return;
 }
 
@@ -1187,11 +1187,21 @@ const COMMANDS = [
 let paletteActive = false;
 let selectedIndex = 0;
 
-function openCommandPalette(x, y) {
+function openCommandPalette() {
+  const sel = window.getSelection();
+  if (!sel.rangeCount) return;
+
+  const range = sel.getRangeAt(0).cloneRange();
+  const rect = range.getBoundingClientRect();
+
+  const palette = commandPalette;
+  palette.style.display = "block";
+
+  // Position palette below the caret
+  palette.style.left = `${rect.left}px`;
+  palette.style.top = `${rect.bottom + window.scrollY}px`;
+
   paletteActive = true;
-  commandPalette.style.display = "block";
-  commandPalette.style.left = `${x}px`;
-  commandPalette.style.top = `${y}px`;
   commandSearch.value = "";
   renderCommandOptions(COMMANDS);
   commandSearch.focus();

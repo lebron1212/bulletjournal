@@ -863,6 +863,9 @@ function renderCollections(slugs) {
   });
 }
 
+  let journalContent;
+
+
 // Utility: Place caret at start of node
 function placeCaretAtStart(node) {
   const range = document.createRange();
@@ -888,6 +891,7 @@ function placeCaretAtEnd(node) {
 
 // INIT
 window.onload = () => {
+  journalContent = document.getElementById("journal-content");
   journalContent.addEventListener("keydown", (e) => {
   if (e.key !== "Enter") return;
 

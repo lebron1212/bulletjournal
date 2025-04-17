@@ -510,7 +510,6 @@ function makeAllLinesEditable() {
     const txt = div.querySelector(".line-text");
     if (txt) {
       txt.contentEditable = true;
-
       txt.onkeydown = null;
       txt.oninput = null;
 
@@ -520,47 +519,25 @@ function makeAllLinesEditable() {
         if (e.key === "Enter") {
           e.preventDefault();
 
-          const isCheckboxLine = !!div.querySelector("input[type='checkbox']");
-
-          const newDiv = document.createElement("div");
-          newDiv.className = "entry-line";
-
-          if (isCheckboxLine) {
-            const newCB = document.createElement("input");
-            newCB.type = "checkbox";
-            newCB.onchange = saveContent;
-            newDiv.appendChild(newCB);
-          }
-
-          const newText = document.createElement("div");
-          newText.className = "line-text";
-          newText.contentEditable = true;
-          newText.addEventListener("input", saveContent);
-          newDiv.appendChild(newText);
-
-          div.insertAdjacentElement("afterend", newDiv);
-          makeAllLinesEditable(); // Rebind event to new line
-          newText.focus();
+          const type = e.shiftKey ? "checkbox" : "text";
+          const newLine = addEntryLine(type);
+          div.insertAdjacentElement("afterend", newLine);
+          makeAllLinesEditable(); // Rebind for new line
+          newLine.querySelector(".line-text").focus();
         }
 
         if (e.key === "Backspace" && txt.textContent.trim() === "") {
-  e.preventDefault();
-
-  const parent = div.parentNode;
-  const nextFocus = div.previousElementSibling || div.nextElementSibling;
-
-  div.remove();
-
-  if (!parent.querySelector(".entry-line")) {
-    // add a new blank one
-    const fallback = addEntryLine();
-    fallback.querySelector(".line-text").focus();
-  } else if (nextFocus) {
-    nextFocus.querySelector(".line-text")?.focus();
-  }
-
-  saveContent();
-}
+          e.preventDefault();
+          const prev = div.previousElementSibling;
+          div.remove();
+          if (prev) {
+            prev.querySelector(".line-text")?.focus();
+          } else {
+            const fallback = addEntryLine();
+            fallback.querySelector(".line-text").focus();
+          }
+          saveContent();
+        }
       });
     }
   });
@@ -626,24 +603,24 @@ function ensureEditableLine() {
   if (content.innerHTML.trim() === "") addEntryLine("Start writing...");
 }
 
-function addEntryLine(text = "") {
+function addEntryLine(type = "text", text = "") {
   const content = document.getElementById("journal-content");
   const div = document.createElement("div");
   div.className = "entry-line";
 
-  const cb = document.createElement("input");
-  cb.type = "checkbox";
-  cb.onchange = saveContent;
+  if (type === "checkbox") {
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.onchange = saveContent;
+    div.appendChild(cb);
+  }
 
   const txt = document.createElement("div");
   txt.className = "line-text";
   txt.contentEditable = true;
   txt.innerHTML = text;
-
-  // 🧠 Event: Save on input
   txt.addEventListener("input", saveContent);
 
-  div.appendChild(cb);
   div.appendChild(txt);
   content.appendChild(div);
   return div;

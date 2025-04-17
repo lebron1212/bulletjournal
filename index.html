@@ -368,6 +368,45 @@
         min-height: 300px;
       }
     }
+    #command-palette {
+  position: absolute;
+  z-index: 9999;
+  background: #111;
+  color: #fff;
+  width: 240px;
+  border-radius: 8px;
+  border: 1px solid #555;
+  padding: 8px;
+  top: 100px;
+  left: 100px;
+}
+
+#command-palette input {
+  width: 100%;
+  padding: 6px;
+  margin-bottom: 6px;
+  background: #222;
+  border: 1px solid #555;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.75rem;
+}
+
+#command-options {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.command-option {
+  padding: 6px;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.command-option.active {
+  background: #333;
+}
   </style>
 </head>
 <body>
@@ -939,10 +978,12 @@ window.onload = () => {
 
   // Slash activates command mode
   if (e.key === "/") {
-    isCommandMode = true;
-    commandBuffer = "/";
-    return;
-  }
+  e.preventDefault();
+  window._targetBlock = parent;
+  const rect = parent.getBoundingClientRect();
+  openCommandPalette(rect.left + 10, rect.top + 30);
+  return;
+}
 
   // If we're typing a command...
   if (isCommandMode) {
@@ -1112,6 +1153,113 @@ window.onload = () => {
   journalContent.appendChild(line);
 }
 };
+  const commandPalette = document.getElementById("command-palette");
+const commandSearch = document.getElementById("command-search");
+const commandOptionsBox = document.getElementById("command-options");
+
+const COMMANDS = [
+  { name: "/todo", label: "Checkbox" },
+  { name: "/divider", label: "Divider" },
+  { name: "/list", label: "List Item" }
+];
+
+let paletteActive = false;
+let selectedIndex = 0;
+
+function openCommandPalette(x, y) {
+  paletteActive = true;
+  commandPalette.style.display = "block";
+  commandPalette.style.left = `${x}px`;
+  commandPalette.style.top = `${y}px`;
+  commandSearch.value = "";
+  renderCommandOptions(COMMANDS);
+  commandSearch.focus();
+}
+
+function closeCommandPalette() {
+  paletteActive = false;
+  commandPalette.style.display = "none";
+  selectedIndex = 0;
+}
+
+function renderCommandOptions(filtered) {
+  commandOptionsBox.innerHTML = "";
+  filtered.forEach((cmd, i) => {
+    const div = document.createElement("div");
+    div.textContent = cmd.label;
+    div.className = "command-option" + (i === selectedIndex ? " active" : "");
+    div.onclick = () => {
+      applyCommand(cmd.name);
+      closeCommandPalette();
+    };
+    commandOptionsBox.appendChild(div);
+  });
+}
+
+commandSearch.addEventListener("input", () => {
+  const val = commandSearch.value.toLowerCase();
+  const matches = COMMANDS.filter(c => c.name.includes(val) || c.label.toLowerCase().includes(val));
+  renderCommandOptions(matches);
+});
+
+commandSearch.addEventListener("keydown", e => {
+  const visible = Array.from(commandOptionsBox.children);
+  if (e.key === "ArrowDown") {
+    selectedIndex = (selectedIndex + 1) % visible.length;
+    renderCommandOptions(COMMANDS);
+    e.preventDefault();
+  } else if (e.key === "ArrowUp") {
+    selectedIndex = (selectedIndex - 1 + visible.length) % visible.length;
+    renderCommandOptions(COMMANDS);
+    e.preventDefault();
+  } else if (e.key === "Enter") {
+    visible[selectedIndex]?.click();
+    e.preventDefault();
+  } else if (e.key === "Escape") {
+    closeCommandPalette();
+    e.preventDefault();
+  }
+});
+
+function applyCommand(cmd) {
+  const parent = window._targetBlock;
+  if (!parent) return;
+
+  if (cmd === "/todo") {
+    const block = document.createElement("div");
+    block.className = "entry-line";
+
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.onchange = saveContent;
+
+    const text = document.createElement("div");
+    text.className = "line-text";
+    text.contentEditable = true;
+
+    block.appendChild(cb);
+    block.appendChild(text);
+    journalContent.replaceChild(block, parent);
+    placeCaretAtStart(text);
+    saveContent();
+  } else if (cmd === "/divider") {
+    const div = document.createElement("hr");
+    journalContent.insertBefore(div, parent.nextSibling);
+    saveContent();
+  } else if (cmd === "/list") {
+    const block = document.createElement("div");
+    block.className = "line-text";
+    block.contentEditable = true;
+    block.textContent = "- ";
+    journalContent.insertBefore(block, parent.nextSibling);
+    placeCaretAtStart(block);
+    saveContent();
+  }
+}
 </script>
+  <div id="command-palette" style="display: none;" class="popup" tabindex="-1">
+  <input id="command-search" placeholder="Type a command..." autofocus />
+  <div id="command-options"></div>
+</div>
 </body>
 </html>

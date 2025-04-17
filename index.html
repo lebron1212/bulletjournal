@@ -892,7 +892,7 @@ function placeCaretAtEnd(node) {
 // INIT
 window.onload = () => {
   journalContent = document.getElementById("journal-content");
-  journalContent.addEventListener("keydown", (e) => {
+ journalContent.addEventListener("keydown", (e) => {
   if (e.key !== "Enter") return;
 
   const sel = window.getSelection();
@@ -901,72 +901,77 @@ window.onload = () => {
   const range = sel.getRangeAt(0);
   let node = range.startContainer;
 
-  // Traverse up to find the editable .line-text block
   while (node && node !== journalContent && !node.classList.contains("line-text")) {
     node = node.parentNode;
   }
 
   if (!node) return;
 
-  const textContent = node.textContent.trim();
   const parent = node.closest(".entry-line") || node;
 
-  e.preventDefault(); // Stop default Enter behavior
+  // Wait for key to be processed so content is current
+  setTimeout(() => {
+    const textContent = node.textContent.trim();
 
-  // ✅ Handle special shortcuts
-  if (textContent === "/todo" || textContent === "- [ ]") {
-    const checkboxBlock = document.createElement("div");
-    checkboxBlock.className = "entry-line";
+    // Handle special shortcuts
+    if (textContent === "/todo" || textContent === "- [ ]") {
+      e.preventDefault();
 
-    const cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.onchange = saveContent;
+      const checkboxBlock = document.createElement("div");
+      checkboxBlock.className = "entry-line";
 
-    const lineText = document.createElement("div");
-    lineText.className = "line-text";
-    lineText.contentEditable = true;
-    lineText.innerHTML = "";
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.onchange = saveContent;
 
-    checkboxBlock.appendChild(cb);
-    checkboxBlock.appendChild(lineText);
+      const lineText = document.createElement("div");
+      lineText.className = "line-text";
+      lineText.contentEditable = true;
+      lineText.innerHTML = "";
 
-    journalContent.replaceChild(checkboxBlock, parent);
-    placeCaretAtStart(lineText);
-    saveContent();
-    return;
-  }
+      checkboxBlock.appendChild(cb);
+      checkboxBlock.appendChild(lineText);
 
-  // ✅ Regular behavior (add new block after current)
-  const isInCheckbox = parent.classList.contains("entry-line");
-  const newBlock = document.createElement("div");
+      journalContent.replaceChild(checkboxBlock, parent);
+      placeCaretAtStart(lineText);
+      saveContent();
+    } else {
+      // Normal Enter behavior
+      e.preventDefault();
 
-  if (isInCheckbox) {
-    newBlock.className = "entry-line";
+      const isInCheckbox = parent.classList.contains("entry-line");
+      const newBlock = document.createElement("div");
 
-    const cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.onchange = saveContent;
+      if (isInCheckbox) {
+        newBlock.className = "entry-line";
 
-    const lineText = document.createElement("div");
-    lineText.className = "line-text";
-    lineText.contentEditable = true;
-    lineText.innerHTML = "";
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.onchange = saveContent;
 
-    newBlock.appendChild(cb);
-    newBlock.appendChild(lineText);
-    journalContent.insertBefore(newBlock, parent.nextSibling);
-    placeCaretAtStart(lineText);
-  } else {
-    newBlock.className = "line-text";
-    newBlock.contentEditable = true;
-    newBlock.innerHTML = "";
+        const lineText = document.createElement("div");
+        lineText.className = "line-text";
+        lineText.contentEditable = true;
+        lineText.innerHTML = "";
 
-    journalContent.insertBefore(newBlock, parent.nextSibling);
-    placeCaretAtStart(newBlock);
-  }
+        newBlock.appendChild(cb);
+        newBlock.appendChild(lineText);
+        journalContent.insertBefore(newBlock, parent.nextSibling);
+        placeCaretAtStart(lineText);
+      } else {
+        newBlock.className = "line-text";
+        newBlock.contentEditable = true;
+        newBlock.innerHTML = "";
 
-  saveContent();
+        journalContent.insertBefore(newBlock, parent.nextSibling);
+        placeCaretAtStart(newBlock);
+      }
+
+      saveContent();
+    }
+  }, 0); // allow key event to finish
 });
+
 
   // ✅ Global shortcuts (moved here to fix journalContent reference error)
   document.addEventListener("keydown", (e) => {

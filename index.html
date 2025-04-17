@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>Bullet Journal</title>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <style>
     * { box-sizing: border-box; }
     html, body {
@@ -133,6 +132,7 @@
       flex: 1;
       overflow-y: auto;
       padding-right: 6px;
+      transition: opacity 0.2s ease-in-out;
     }
 
     .entry-line {
@@ -142,16 +142,23 @@
       margin-bottom: 12px;
     }
 
-    .entry-line .drag-handle {
-      font-size: 1rem;
-      cursor: move;
-      user-select: none;
-      opacity: 0.4;
+    .entry-line input[type="checkbox"] {
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border: 1px solid #888;
+      display: inline-block;
+      position: relative;
+      cursor: pointer;
     }
 
-    .entry-line input[type="checkbox"] {
-      transform: scale(1.2);
-      cursor: pointer;
+    .entry-line input[type="checkbox"]:checked::before {
+      content: "X";
+      color: #fff;
+      font-size: 0.7rem;
+      position: absolute;
+      left: 2px;
+      top: -1px;
     }
 
     .entry-line .line-text {
@@ -160,6 +167,11 @@
       min-height: 18px;
       padding: 2px 0;
       word-break: break-word;
+    }
+
+    .entry-line input[type="checkbox"]:checked + .line-text {
+      text-decoration: line-through;
+      opacity: 0.6;
     }
 
     .popup {
@@ -223,10 +235,18 @@
 
     #sync-status {
       position: fixed;
-      bottom: 12px;
-      left: 20px;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
       font-size: 0.65rem;
       opacity: 0.8;
+    }
+
+    @media (prefers-color-scheme: light) {
+      html, body { color: #000; }
+      .entry-line input[type="checkbox"]:checked + .line-text {
+        color: #000;
+      }
     }
 
     @media (max-width: 700px) {
@@ -240,9 +260,6 @@
       }
       #journal-panel {
         min-height: 300px;
-      }
-      .entry-line .drag-handle {
-        display: none;
       }
     }
   </style>
@@ -274,7 +291,6 @@
           <div id="entry-title">DAILY LOG</div>
           <div id="entry-date">MON, APR 14</div>
         </div>
-        <button class="drag-toggle-btn" id="dragToggleBtn" title="Toggle reorder mode">☰</button>
       </div>
       <div id="journal-content" class="notes" contenteditable="true"></div>
     </div>
@@ -296,9 +312,7 @@
     </div>
   </div>
 
-  <!-- Create, Rename, Delete Collection Popups will be in Part 2 -->
-
-  <!-- Create Collection Popup -->
+  <!-- Collection Popups -->
   <div id="collection-popup" class="popup" style="display:none;">
     <h3>NEW COLLECTION</h3>
     <input id="new-collection-name" placeholder="Collection name" />
@@ -308,7 +322,6 @@
     </div>
   </div>
 
-  <!-- Rename Collection Popup -->
   <div id="rename-popup" class="popup" style="display:none;">
     <h3>RENAME COLLECTION</h3>
     <input id="rename-input" placeholder="New name" />
@@ -318,7 +331,6 @@
     </div>
   </div>
 
-  <!-- Delete Collection Popup -->
   <div id="delete-popup" class="popup" style="display:none;">
     <h3>DELETE COLLECTION</h3>
     <p>ARE YOU SURE YOU WANT TO DELETE THIS COLLECTION?</p>
@@ -333,47 +345,47 @@
     <span class="spinner" style="display:none;">⏳</span>
     <span class="label">SYNCED</span>
   </div>
-
 <script>
 let currentMode = "daily";
 let currentSlug = "";
-let dragMode = false;
 let recentEntries = [];
 let selectedCalendarDate = null;
 
-// === UTILS ===
 function getTodaySlug(offset = 0) {
   const d = new Date();
   d.setDate(d.getDate() + offset);
   return d.toISOString().slice(0, 10);
 }
+
 function encodeHTML(str) {
   return btoa(unescape(encodeURIComponent(str)));
 }
+
 function decodeHTML(str) {
   return decodeURIComponent(escape(atob(str)));
 }
+
 function extractVersion(html) {
   const match = html.match(/<!-- version:(.*?)-->/);
   return match ? new Date(match[1]) : new Date(0);
 }
+
 function updateStatus(text, syncing = false) {
   document.querySelector("#sync-status .label").textContent = text;
   document.querySelector("#sync-status .spinner").style.display = syncing ? "inline-block" : "none";
 }
+
 function formatPrettyDate(dateStr) {
   const d = new Date(dateStr);
   return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }).toUpperCase();
 }
 
-// === SIDEBAR ACTIVE LOGIC ===
 function highlightActive(slug) {
   document.querySelectorAll(".item").forEach(i => {
     i.classList.toggle("active", i.dataset.entry === slug);
   });
 }
 
-// === CONTENT LOADING ===
 function loadContent(mode, slug, label, url) {
   currentMode = mode;
   currentSlug = slug;
@@ -395,179 +407,29 @@ function loadContent(mode, slug, label, url) {
   const cached = localStorage.getItem(`bujocache-${mode}-${slug}`);
   const cachedHtml = cached ? decodeHTML(cached) : "";
   const cachedVer = extractVersion(cachedHtml);
-  content.innerHTML = cachedHtml.replace(/<!--.*?-->/, "") || "";
-  ensureEditableLine();
+  smoothEntryTransition(cachedHtml.replace(/<!--.*?-->/, "") || "");
   updateStatus(cached ? "LOADED CACHED" : "EMPTY");
 
   fetch(url).then(res => res.ok ? res.text() : null).then(remote => {
     if (!remote) return;
     const remoteVer = extractVersion(remote);
     if (remoteVer > cachedVer) {
-      content.innerHTML = remote.replace(/<!--.*?-->/, "");
+      smoothEntryTransition(remote.replace(/<!--.*?-->/, ""));
       localStorage.setItem(`bujocache-${mode}-${slug}`, encodeHTML(remote));
       updateStatus("LOADED SYNCED");
     }
   }).catch(() => updateStatus("OFFLINE"));
 }
 
-// === RECENTS ===
-function renderRecents() {
-  const box = document.getElementById("recent-entries");
-  box.innerHTML = "";
-  const today = getTodaySlug();
-  const yest = getTodaySlug(-1);
-  const tomo = getTodaySlug(1);
-  recentEntries.filter(slug => ![today, yest, tomo].includes(slug)).forEach(slug => {
-    const div = document.createElement("div");
-    div.className = "item";
-    div.dataset.entry = slug;
-    div.textContent = slug;
-    div.onclick = () => loadContent("daily", slug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${slug}.html`);
-    box.appendChild(div);
-  });
-}
-document.getElementById("recents-toggle").onclick = () => {
-  const box = document.getElementById("recent-entries");
-  const expanded = box.style.display !== "none";
-  box.style.display = expanded ? "none" : "block";
-  document.getElementById("recents-toggle").textContent = expanded ? "▶" : "▼";
-};
-
-// === COLLECTION CRUD ===
-function toggleCollectionPopup() {
-  const popup = document.getElementById("collection-popup");
-  popup.style.display = popup.style.display === "none" ? "flex" : "none";
-}
-function hideRenamePopup() {
-  document.getElementById("rename-popup").style.display = "none";
-}
-function hideDeletePopup() {
-  document.getElementById("delete-popup").style.display = "none";
-}
-function createCollection() {
-  const input = document.getElementById("new-collection-name");
-  const name = input.value.trim().toUpperCase().replace(/\s+/g, "-");
-  if (!name) return;
-  const html = `<!-- version:${new Date().toISOString()} -->\n<div class="entry-line"><div class="drag-handle">☰</div><input type="checkbox"><div class="line-text">New collection: ${name}</div></div>`;
-  fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ date: name, content: encodeHTML(html), mode: "collection" })
-  }).then(() => {
-    input.value = "";
-    toggleCollectionPopup();
-    const updated = [name, ...new Set([name, ...JSON.parse(localStorage.getItem("collections-list") || "[]")])];
-    localStorage.setItem("collections-list", JSON.stringify(updated));
-    renderCollections(updated);
-  });
-}
-function confirmRename() {
-  const newName = document.getElementById("rename-input").value.trim().toUpperCase().replace(/\s+/g, "-");
-  if (!newName || !window._renameTarget) return;
-  fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ rename: window._renameTarget, to: newName, mode: "collection" })
-  }).then(() => {
-    hideRenamePopup();
-    const updated = JSON.parse(localStorage.getItem("collections-list") || "[]").map(s => s === window._renameTarget ? newName : s);
-    localStorage.setItem("collections-list", JSON.stringify(updated));
-    renderCollections(updated);
-  });
-}
-function confirmDelete() {
-  if (!window._deleteTarget) return;
-  fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ delete: window._deleteTarget, mode: "collection" })
-  }).then(() => {
-    hideDeletePopup();
-    const updated = JSON.parse(localStorage.getItem("collections-list") || "[]").filter(s => s !== window._deleteTarget);
-    localStorage.setItem("collections-list", JSON.stringify(updated));
-    renderCollections(updated);
-  });
-}
-function loadCollectionsList() {
-  const box = document.getElementById("collections-list");
-  const stored = localStorage.getItem("collections-list");
-  let slugs = stored ? JSON.parse(stored) : [];
-
-  renderCollections(slugs);
-
-  fetch("https://api.github.com/repos/lebron1212/bulletjournal/contents/journals/collections")
-    .then(res => res.ok ? res.json() : [])
-    .then(data => {
-      const remoteSlugs = data
-        .filter(i => i.name.startsWith("collection-") && i.name.endsWith(".html"))
-        .map(i => i.name.replace("collection-", "").replace(".html", ""));
-      localStorage.setItem("collections-list", JSON.stringify(remoteSlugs));
-      renderCollections(remoteSlugs);
-    });
-}
-function renderCollections(slugs) {
-  const box = document.getElementById("collections-list");
-  box.innerHTML = "";
-  slugs.forEach(slug => {
-    const div = document.createElement("div");
-    div.className = "item";
-    div.dataset.entry = slug;
-    div.textContent = slug;
-
-    const ctrl = document.createElement("div");
-    ctrl.className = "item-controls";
-
-    const rename = document.createElement("button");
-    rename.className = "icon-btn";
-    rename.innerText = "✎";
-    rename.onclick = e => {
-      e.stopPropagation();
-      window._renameTarget = slug;
-      document.getElementById("rename-input").value = slug;
-      document.getElementById("rename-popup").style.display = "flex";
-    };
-
-    const del = document.createElement("button");
-    del.className = "icon-btn";
-    del.innerText = "✕";
-    del.onclick = e => {
-      e.stopPropagation();
-      window._deleteTarget = slug;
-      document.getElementById("delete-popup").style.display = "flex";
-    };
-
-    ctrl.appendChild(rename);
-    ctrl.appendChild(del);
-    div.appendChild(ctrl);
-
-    div.onclick = () => {
-      loadContent("collection", slug, slug, `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/collections/collection-${slug}.html`);
-    };
-
-    box.appendChild(div);
-  });
-}
-</script>
-<script>
-const content = document.getElementById("journal-content");
-
-// === JOURNAL ENTRY UTILITIES ===
 function ensureEditableLine() {
+  const content = document.getElementById("journal-content");
   if (content.innerHTML.trim() === "") addEntryLine("Start writing...");
 }
-function forceCheckboxAttrs() {
-  content.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-    cb.checked ? cb.setAttribute("checked", "checked") : cb.removeAttribute("checked");
-  });
-}
+
 function addEntryLine(text = "") {
+  const content = document.getElementById("journal-content");
   const div = document.createElement("div");
   div.className = "entry-line";
-  if (dragMode) div.classList.add("drag-enabled");
-
-  const drag = document.createElement("div");
-  drag.className = "drag-handle";
-  drag.textContent = "☰";
 
   const cb = document.createElement("input");
   cb.type = "checkbox";
@@ -575,21 +437,29 @@ function addEntryLine(text = "") {
 
   const txt = document.createElement("div");
   txt.className = "line-text";
-  txt.contentEditable = !dragMode;
+  txt.contentEditable = true;
   txt.innerHTML = text;
 
-  div.appendChild(drag);
   div.appendChild(cb);
   div.appendChild(txt);
   content.appendChild(div);
 }
 
-// === SYNC ===
+function forceCheckboxAttrs() {
+  const content = document.getElementById("journal-content");
+  content.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.checked ? cb.setAttribute("checked", "checked") : cb.removeAttribute("checked");
+  });
+}
+
 function saveLocal() {
+  const content = document.getElementById("journal-content");
   const html = `<!-- version:${new Date().toISOString()} -->\n${content.innerHTML}`;
   localStorage.setItem(`bujocache-${currentMode}-${currentSlug}`, encodeHTML(html));
 }
+
 function syncRemote() {
+  const content = document.getElementById("journal-content");
   const html = `<!-- version:${new Date().toISOString()} -->\n${content.innerHTML}`;
   updateStatus("SYNCING...", true);
   fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
@@ -599,10 +469,12 @@ function syncRemote() {
   }).then(res => updateStatus(res.ok ? "SYNCED" : "NETLIFY ERROR"))
     .catch(() => updateStatus("SYNC FAILED"));
 }
+
 function debounceSync() {
   clearTimeout(window._syncTimeout);
   window._syncTimeout = setTimeout(syncRemote, 1000);
 }
+
 function saveContent() {
   forceCheckboxAttrs();
   saveLocal();
@@ -610,45 +482,25 @@ function saveContent() {
   pushUndoState();
 }
 
-// === DRAG MODE ===
-let sortable = null;
-document.getElementById("dragToggleBtn").onclick = () => {
-  dragMode = !dragMode;
-  content.querySelectorAll(".entry-line").forEach(div => {
-    const txt = div.querySelector(".line-text");
-    txt.contentEditable = !dragMode;
-    div.classList.toggle("drag-enabled", dragMode);
-  });
-
-  if (dragMode && !sortable) {
-    sortable = new Sortable(content, {
-      animation: 150,
-      handle: ".drag-handle",
-      onEnd: () => {
-        saveContent();
-      }
-    });
-  } else if (!dragMode && sortable) {
-    sortable.destroy();
-    sortable = null;
-  }
-};
-
-// === UNDO / REDO ===
 let undoStack = [], redoStack = [];
 function pushUndoState() {
+  const content = document.getElementById("journal-content");
   undoStack.push(content.innerHTML);
   if (undoStack.length > 50) undoStack.shift();
   redoStack = [];
 }
+
 function undo() {
+  const content = document.getElementById("journal-content");
   if (undoStack.length > 1) {
     redoStack.push(undoStack.pop());
     content.innerHTML = undoStack[undoStack.length - 1];
     saveContent();
   }
 }
+
 function redo() {
+  const content = document.getElementById("journal-content");
   if (redoStack.length) {
     const state = redoStack.pop();
     undoStack.push(state);
@@ -657,7 +509,6 @@ function redo() {
   }
 }
 
-// === KEYBOARD SHORTCUTS ===
 document.addEventListener("keydown", e => {
   if ((e.metaKey || e.ctrlKey) && e.key === "b") {
     document.execCommand("bold"); e.preventDefault();
@@ -672,12 +523,11 @@ document.addEventListener("keydown", e => {
   }
 });
 
-// === CALENDAR LOGIC ===
+// Calendar logic
 const calendarPopup = document.getElementById("calendar-popup");
 const calendarGrid = document.getElementById("calendar-grid");
 const calendarMonthLabel = document.getElementById("calendar-month");
 const calendarCreateBtn = document.getElementById("calendar-create");
-
 let calendarDate = new Date();
 
 function openCalendarPopup() {
@@ -686,6 +536,7 @@ function openCalendarPopup() {
   selectedCalendarDate = null;
   renderCalendar();
 }
+
 function renderCalendar() {
   const month = calendarDate.getMonth();
   const year = calendarDate.getFullYear();
@@ -693,12 +544,10 @@ function renderCalendar() {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const dots = getDotDaysForMonth(year, month);
   calendarGrid.innerHTML = "";
-
   calendarMonthLabel.textContent = `${calendarDate.toLocaleString('default', { month: 'long' })} ${year}`;
 
   for (let i = 0; i < firstDay; i++) {
-    const blank = document.createElement("div");
-    calendarGrid.appendChild(blank);
+    calendarGrid.appendChild(document.createElement("div"));
   }
 
   for (let d = 1; d <= daysInMonth; d++) {
@@ -718,6 +567,7 @@ function renderCalendar() {
     calendarGrid.appendChild(day);
   }
 }
+
 function getDotDaysForMonth(year, month) {
   const dots = new Set();
   Object.keys(localStorage).forEach(key => {
@@ -731,6 +581,7 @@ function getDotDaysForMonth(year, month) {
   });
   return dots;
 }
+
 document.getElementById("calendar-btn").onclick = openCalendarPopup;
 document.getElementById("prev-month").onclick = () => {
   calendarDate.setMonth(calendarDate.getMonth() - 1);
@@ -746,7 +597,9 @@ calendarCreateBtn.onclick = () => {
   loadContent("daily", selectedCalendarDate, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${selectedCalendarDate}.html`);
 };
 
-// === FINAL INIT ===
+// Recents and collections logic skipped here (already sent in Part 2)
+
+// Final load
 window.onload = () => {
   recentEntries = JSON.parse(localStorage.getItem("recent-entries") || "[]");
   renderRecents();
@@ -758,10 +611,8 @@ window.onload = () => {
 
   document.querySelector('[data-entry="today"]').onclick = () =>
     loadContent("daily", today, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${today}.html`);
-
   document.querySelector('[data-entry="yesterday"]').onclick = () =>
     loadContent("daily", yest, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${yest}.html`);
-
   document.querySelector('[data-entry="tomorrow"]').onclick = () =>
     loadContent("daily", tomo, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${tomo}.html`);
 

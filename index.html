@@ -895,7 +895,10 @@ window.onload = () => {
     const sel = window.getSelection();
     if (!sel.rangeCount) return;
     const range = sel.getRangeAt(0);
-    const currentBlock = range.startContainer.closest("div");
+    let currentBlock = range.startContainer;
+while (currentBlock && currentBlock !== journalContent && !currentBlock.classList.contains("entry-line") && !currentBlock.classList.contains("line-text")) {
+  currentBlock = currentBlock.parentElement;
+}
 
     if (e.key === "Enter") {
   e.preventDefault();

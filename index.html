@@ -133,11 +133,12 @@
     #journal-content {
   flex: 1;
   overflow-y: auto;
-  padding-right: 6px;
-  transition: opacity 0.2s ease-in-out;
-  font-size: 0.85rem;
-  line-height: 1.6;
-  letter-spacing: 0.03em;
+  padding: 20px;
+  max-width: 640px;
+  margin: 0 auto;
+  font-size: 1rem;
+  line-height: 1.8;
+  letter-spacing: 0.02em;
   font-weight: 400;
 }
 
@@ -456,6 +457,7 @@ function smoothEntryTransition(newHtml) {
   setTimeout(() => {
     content.innerHTML = newHtml;
     ensureEditableLine();
+    pushUndoState();
     content.style.opacity = 1;
   }, 120);
 }
@@ -503,10 +505,17 @@ function addEntryLine(text = "") {
   txt.className = "line-text";
   txt.contentEditable = true;
   txt.innerHTML = text;
+  txt.addEventListener("input", () => {
+  saveContent(); // ensures local save and sync
+});
+
 
   div.appendChild(cb);
   div.appendChild(txt);
   content.appendChild(div);
+
+  saveContent(); // optional: saves on new line
+  return div;
 }
 
 function forceCheckboxAttrs() {
@@ -579,6 +588,16 @@ document.addEventListener("keydown", e => {
   else if ((e.metaKey || e.ctrlKey) && e.key === "u") { document.execCommand("underline"); e.preventDefault(); }
   else if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) { undo(); e.preventDefault(); }
   else if ((e.metaKey || e.ctrlKey) && (e.key === "Z" || (e.shiftKey && e.key === "z"))) { redo(); e.preventDefault(); }
+  else if (e.key === "Enter" && document.activeElement.classList.contains("line-text")) {
+    e.preventDefault();
+    const newLine = addEntryLine();
+    newLine.querySelector(".line-text").focus();
+  }
+  else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "c") {
+    e.preventDefault();
+    const newLine = addEntryLine();
+    newLine.querySelector(".line-text").focus();
+  }
 });
 
 // RECENTS

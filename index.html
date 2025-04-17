@@ -979,6 +979,15 @@ if (!node) return;
 
 let parent = node.closest(".entry-line") || node;
 
+   if (e.key === "/" && !isCommandMode && !e.metaKey && !e.ctrlKey && !e.altKey) {
+  isCommandMode = true;
+  commandBuffer = "/";
+  window._targetBlock = parent;
+  console.log("🟢 Command mode activated at", parent);
+  openCommandPalette(e.clientX, e.clientY);
+  return;
+}
+
 if (!node.classList.contains("line-text") && !parent.classList.contains("entry-line")) {
   // Force wrap in .line-text if it's a raw empty div or unstyled line
   const wrapper = document.createElement("div");

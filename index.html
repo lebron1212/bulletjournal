@@ -990,6 +990,13 @@ if (!node.classList.contains("line-text") && !parent.classList.contains("entry-l
   parent = wrapper;
 }
 
+   // Trigger command mode when typing `/`
+if (e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+  isCommandMode = true;
+  commandBuffer = "/";
+  return;
+}
+
   // If we're typing a command...
   if (isCommandMode) {
     if (e.key.length === 1 && !e.metaKey && !e.ctrlKey) {

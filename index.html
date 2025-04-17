@@ -468,6 +468,44 @@ function formatPrettyDate(dateStr) {
   });
 }
 
+function makeAllLinesEditable() {
+  document.querySelectorAll("#journal-content .entry-line").forEach(div => {
+    const txt = div.querySelector(".line-text");
+    if (txt) {
+      txt.contentEditable = true;
+
+      // Avoid double-binding listeners
+      txt.onkeydown = null;
+      txt.oninput = null;
+
+      txt.addEventListener("input", saveContent);
+
+      txt.addEventListener("keydown", e => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          e.stopPropagation();
+          const newLine = addEntryLine();
+          div.insertAdjacentElement("afterend", newLine);
+          newLine.querySelector(".line-text").focus();
+        }
+
+        if (e.key === "Backspace" && txt.textContent.trim() === "") {
+          e.preventDefault();
+          div.remove();
+          saveContent();
+        }
+
+        if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "c") {
+          e.preventDefault();
+          const newLine = addEntryLine();
+          div.insertAdjacentElement("afterend", newLine);
+          newLine.querySelector(".line-text").focus();
+        }
+      });
+    }
+  });
+}
+
 
 function smoothEntryTransition(newHtml) {
   const content = document.getElementById("journal-content");

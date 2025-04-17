@@ -69,6 +69,11 @@
       cursor: pointer;
     }
 
+    *:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
     .item.active {
       font-weight: bold;
       color: #fff;
@@ -522,12 +527,28 @@ function addEntryLine(text = "") {
   // Save on typing
   txt.addEventListener("input", saveContent);
 
-  // 🧹 Backspace-to-delete empty line
   txt.addEventListener("keydown", e => {
+    // ENTER inserts new line
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const newLine = addEntryLine();
+      div.insertAdjacentElement("afterend", newLine);
+      newLine.querySelector(".line-text").focus();
+    }
+
+    // BACKSPACE deletes empty line
     if (e.key === "Backspace" && txt.textContent.trim() === "") {
       e.preventDefault();
       div.remove();
       saveContent();
+    }
+
+    // CMD+SHIFT+C adds new line
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "c") {
+      e.preventDefault();
+      const newLine = addEntryLine();
+      div.insertAdjacentElement("afterend", newLine);
+      newLine.querySelector(".line-text").focus();
     }
   });
 

@@ -893,26 +893,29 @@ window.onload = () => {
   journalContent.addEventListener("keydown", (e) => {
   if (e.key !== "Enter") return;
 
-  e.preventDefault(); // stop default enter behavior
-
   const sel = window.getSelection();
   if (!sel.rangeCount) return;
 
   const range = sel.getRangeAt(0);
   let node = range.startContainer;
 
-  // Walk up to the containing block
-  while (node && node !== journalContent && !node.classList.contains("entry-line") && !node.classList.contains("line-text")) {
+  // Walk up to get the editable block container
+  while (node && node !== journalContent && !node.classList.contains("line-text")) {
     node = node.parentNode;
   }
 
-  const isShift = e.shiftKey;
-  const isInCheckbox = node?.classList.contains("entry-line");
+  if (!node) return;
+
+  const parent = node.closest(".entry-line") || node;
+
+  e.preventDefault(); // Stop default Enter behavior
+
+  const isInCheckbox = parent.classList.contains("entry-line");
 
   let newBlock;
 
-  if (isShift || isInCheckbox) {
-    // ✅ Create a new checkbox block
+  if (isInCheckbox) {
+    // ✅ New checkbox block
     newBlock = document.createElement("div");
     newBlock.className = "entry-line";
 
@@ -920,29 +923,28 @@ window.onload = () => {
     cb.type = "checkbox";
     cb.onchange = saveContent;
 
-    const text = document.createElement("div");
-    text.className = "line-text";
-    text.contentEditable = true;
-    text.innerHTML = "";
+    const lineText = document.createElement("div");
+    lineText.className = "line-text";
+    lineText.contentEditable = true;
+    lineText.innerHTML = "";
 
     newBlock.appendChild(cb);
-    newBlock.appendChild(text);
-
-    journalContent.insertBefore(newBlock, node.nextSibling);
-    placeCaretAtStart(text);
+    newBlock.appendChild(lineText);
+    journalContent.insertBefore(newBlock, parent.nextSibling);
+    placeCaretAtStart(lineText);
   } else {
-    // ✅ Create a new plain text block
+    // ✅ New plain block
     newBlock = document.createElement("div");
     newBlock.className = "line-text";
     newBlock.contentEditable = true;
     newBlock.innerHTML = "";
-
-    journalContent.insertBefore(newBlock, node.nextSibling);
+    journalContent.insertBefore(newBlock, parent.nextSibling);
     placeCaretAtStart(newBlock);
   }
 
   saveContent();
 });
+
   // ✅ Global shortcuts (moved here to fix journalContent reference error)
   document.addEventListener("keydown", (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "b") {

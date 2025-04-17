@@ -513,19 +513,40 @@ function formatPrettyDate(dateStr) {
   let isCommandMode = false;
 let commandBuffer = "";
 
+  function normalizeJournalContent() {
+  const content = document.getElementById("journal-content");
+
+  Array.from(content.childNodes).forEach(child => {
+    // If it's a text node or random div/span not wrapped properly
+    if (
+      child.nodeType === Node.TEXT_NODE ||
+      (child.nodeType === Node.ELEMENT_NODE &&
+        !child.classList.contains("entry-line") &&
+        !child.classList.contains("line-text"))
+    ) {
+      const text = child.textContent.trim();
+      if (text.length === 0) {
+        content.removeChild(child); // empty junk
+        return;
+      }
+
+      const block = document.createElement("div");
+      block.className = "line-text";
+      block.contentEditable = true;
+      block.textContent = text;
+      content.replaceChild(block, child);
+    }
+  });
+}
+
 
 function smoothEntryTransition(newHtml) {
-  const content = document.getElementById("journal-content");
+   const content = document.getElementById("journal-content");
   content.style.opacity = 0;
   setTimeout(() => {
     content.innerHTML = newHtml;
 
-    // 🧼 Strip legacy/floating nodes
-    Array.from(content.childNodes).forEach(child => {
-      if (!(child.classList?.contains("entry-line") || child.classList?.contains("line-text"))) {
-        content.removeChild(child);
-      }
-    });
+    normalizeJournalContent();
 
     // 🩹 Fix orphaned lines
     const orphanLines = content.querySelectorAll('.line-text:not(.entry-line .line-text)');
@@ -1082,6 +1103,14 @@ window.onload = () => {
       if (text) text.focus();
     }
   });
+  normalizeJournalContent();
+  if (journalContent.innerHTML.trim() === "") {
+  const line = document.createElement("div");
+  line.className = "line-text";
+  line.contentEditable = true;
+  line.innerHTML = "";
+  journalContent.appendChild(line);
+}
 };
 </script>
 </body>

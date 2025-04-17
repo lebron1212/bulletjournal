@@ -827,7 +827,13 @@ document.getElementById("next-month").onclick = () => { calendarDate.setMonth(ca
 calendarCreateBtn.onclick = () => {
   if (!selectedCalendarDate) return;
   calendarPopup.style.display = "none";
+
   loadContent("daily", selectedCalendarDate, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${selectedCalendarDate}.html`);
+
+  setTimeout(() => {
+    const editable = document.querySelector('#journal-content .line-text');
+    if (editable) placeCaretAtEnd(editable);
+  }, 250);
 };
 
 function toggleCollectionPopup() {
@@ -869,6 +875,12 @@ function createCollection() {
     localStorage.setItem(localKey, JSON.stringify(updated));
     localStorage.setItem(`${localKey}-version`, now); // 🔥 store version timestamp
     renderCollections(updated);
+    loadContent("collection", name, name, `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/collections/collection-${name}.html`);
+
+setTimeout(() => {
+  const editable = document.querySelector('#journal-content .line-text');
+  if (editable) placeCaretAtEnd(editable);
+}, 250);
   });
 }
 function confirmRename() {

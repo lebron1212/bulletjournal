@@ -404,7 +404,7 @@ function formatPrettyDate(dateStr) {
   return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }).toUpperCase();
 }
 
-function highlightActive(slug) {
+  function highlightActive(slug) {
   const today = getTodaySlug();
   const yest = getTodaySlug(-1);
   const tomo = getTodaySlug(1);
@@ -412,15 +412,20 @@ function highlightActive(slug) {
   document.querySelectorAll(".item").forEach(i => {
     const entry = i.dataset.entry;
 
-    const match =
+    const isMatch =
       (entry === slug) ||
       (entry === "today" && slug === today) ||
       (entry === "yesterday" && slug === yest) ||
       (entry === "tomorrow" && slug === tomo);
 
-    i.classList.toggle("active", match);
+    if (isMatch) {
+      i.classList.add("active");
+    } else {
+      i.classList.remove("active");
+    }
   });
 }
+
 
 function smoothEntryTransition(newHtml) {
   const content = document.getElementById("journal-content");
@@ -436,6 +441,8 @@ function loadContent(mode, slug, label, url) {
   currentSlug = slug;
   document.getElementById("entry-title").textContent = label;
   document.getElementById("entry-date").textContent = (mode === "daily") ? formatPrettyDate(slug) : "";
+
+  highlightActive(slug);
 
   const content = document.getElementById("journal-content");
   const cached = localStorage.getItem(`bujocache-${mode}-${slug}`);

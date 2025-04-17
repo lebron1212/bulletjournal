@@ -506,18 +506,35 @@ function makeAllLinesEditable() {
   });
 }
 
-
 function smoothEntryTransition(newHtml) {
   const content = document.getElementById("journal-content");
   content.style.opacity = 0;
   setTimeout(() => {
     content.innerHTML = newHtml;
+
+    // 🩹 Fix orphaned lines
+    const orphanLines = content.querySelectorAll('.line-text:not(.entry-line .line-text)');
+    orphanLines.forEach(textDiv => {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'entry-line';
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.onchange = saveContent;
+
+      textDiv.replaceWith(wrapper);
+      wrapper.appendChild(cb);
+      wrapper.appendChild(textDiv);
+    });
+
     ensureEditableLine();
     makeAllLinesEditable();
     pushUndoState();
     content.style.opacity = 1;
   }, 120);
 }
+
+  
 function loadContent(mode, slug, label, url) {
   currentMode = mode;
   currentSlug = slug;

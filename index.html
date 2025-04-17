@@ -969,15 +969,25 @@ window.onload = () => {
   const range = sel.getRangeAt(0);
   let node = range.startContainer;
 
-  while (node && node !== journalContent && !node.classList.contains("line-text")) {
-    node = node.parentNode;
-  }
-  if (!node) return;
+  // Normalize node and wrap if needed
+while (node && node.nodeType !== 1) node = node.parentNode;
+if (!node) return;
 
-  const parent = node.closest(".entry-line") || node;
+let parent = node.closest(".entry-line") || node;
 
-  // Slash activates command mode
-  if (e.key === "/") {
+if (!node.classList.contains("line-text") && !parent.classList.contains("entry-line")) {
+  // Force wrap in .line-text if it's a raw empty div or unstyled line
+  const wrapper = document.createElement("div");
+  wrapper.className = "line-text";
+  wrapper.contentEditable = true;
+  wrapper.innerHTML = "";
+  journalContent.insertBefore(wrapper, node.nextSibling || null);
+  journalContent.removeChild(node);
+  parent = wrapper;
+}
+
+// Slash activates command mode
+if (e.key === "/") {
   e.preventDefault();
   window._targetBlock = parent;
   const rect = parent.getBoundingClientRect();
@@ -1260,6 +1270,145 @@ function applyCommand(cmd) {
   <div id="command-palette" style="display: none;" class="popup" tabindex="-1">
   <input id="command-search" placeholder="Type a command..." autofocus />
   <div id="command-options"></div>
-</div>
+
+<script>
+let paletteActive = false;
+let selectedIndex = 0;
+let commandPalette, commandSearch, commandOptionsBox;
+
+const COMMANDS = [
+  { name: "/todo", label: "Checkbox" },
+  { name: "/divider", label: "Divider" },
+  { name: "/list", label: "List Item" }
+];
+
+window.addEventListener("DOMContentLoaded", () => {
+  commandPalette = document.getElementById("command-palette");
+  commandSearch = document.getElementById("command-search");
+  commandOptionsBox = document.getElementById("command-options");
+
+  commandSearch.addEventListener("input", () => {
+    const val = commandSearch.value.toLowerCase();
+    const matches = COMMANDS.filter(c => c.name.includes(val) || c.label.toLowerCase().includes(val));
+    selectedIndex = 0;
+    renderCommandOptions(matches);
+  });
+
+  commandSearch.addEventListener("keydown", e => {
+    const options = Array.from(commandOptionsBox.children);
+    if (!options.length) return;
+
+    if (e.key === "ArrowDown") {
+      selectedIndex = (selectedIndex + 1) % options.length;
+      renderCommandOptions();
+      e.preventDefault();
+    } else if (e.key === "ArrowUp") {
+      selectedIndex = (selectedIndex - 1 + options.length) % options.length;
+      renderCommandOptions();
+      e.preventDefault();
+    } else if (e.key === "Enter") {
+      options[selectedIndex]?.click();
+      e.preventDefault();
+    } else if (e.key === "Escape") {
+      closeCommandPalette();
+      e.preventDefault();
+    }
+  });
+});
+
+function openCommandPalette(x = 100, y = 100) {
+  if (paletteActive) return;
+  paletteActive = true;
+  selectedIndex = 0;
+  commandPalette.style.display = "flex";
+  commandPalette.style.left = `${x}px`;
+  commandPalette.style.top = `${y}px`;
+  commandSearch.value = "";
+  renderCommandOptions(COMMANDS);
+  setTimeout(() => commandSearch.focus(), 10);
+}
+
+function closeCommandPalette() {
+  paletteActive = false;
+  commandPalette.style.display = "none";
+  window._targetBlock = null;
+}
+
+function renderCommandOptions(options = COMMANDS) {
+  commandOptionsBox.innerHTML = "";
+  options.forEach((cmd, i) => {
+    const el = document.createElement("div");
+    el.className = "command-option" + (i === selectedIndex ? " active" : "");
+    el.textContent = cmd.label;
+    el.onclick = () => {
+      applyCommand(cmd.name);
+      closeCommandPalette();
+    };
+    commandOptionsBox.appendChild(el);
+  });
+}
+
+function applyCommand(cmd) {
+  const journal = document.getElementById("journal-content");
+  const parent = window._targetBlock || journal.lastChild;
+  if (!parent) return;
+
+  let newBlock;
+
+  if (cmd === "/todo") {
+    newBlock = document.createElement("div");
+    newBlock.className = "entry-line";
+
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.onchange = saveContent;
+
+    const text = document.createElement("div");
+    text.className = "line-text";
+    text.contentEditable = true;
+
+    newBlock.appendChild(cb);
+    newBlock.appendChild(text);
+  }
+
+  else if (cmd === "/divider") {
+    newBlock = document.createElement("hr");
+  }
+
+  else if (cmd === "/list") {
+    newBlock = document.createElement("div");
+    newBlock.className = "line-text";
+    newBlock.contentEditable = true;
+    newBlock.textContent = "- ";
+  }
+
+  if (newBlock) {
+    journal.insertBefore(newBlock, parent.nextSibling);
+    placeCaretAtStart(newBlock.querySelector(".line-text") || newBlock);
+    saveContent();
+  }
+}
+
+// Add global `/` shortcut listener
+document.addEventListener("keydown", e => {
+  if (e.key === "/" && !e.metaKey && !e.ctrlKey && !paletteActive && document.activeElement?.isContentEditable) {
+    const sel = window.getSelection();
+    if (!sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    let node = range.startContainer;
+
+    while (node && !node.classList?.contains("line-text")) {
+      node = node.parentNode;
+    }
+
+    if (node) {
+      e.preventDefault();
+      const rect = node.getBoundingClientRect();
+      window._targetBlock = node.closest(".entry-line") || node;
+      openCommandPalette(rect.left + 10, rect.top + 30);
+    }
+  }
+});
+</script>
 </body>
 </html>

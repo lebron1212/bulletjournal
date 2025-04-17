@@ -888,8 +888,6 @@ function placeCaretAtEnd(node) {
 
 // INIT
 window.onload = () => {
-  const journalContent = document.getElementById("journal-content");
-
   journalContent.addEventListener("keydown", (e) => {
   if (e.key !== "Enter") return;
 
@@ -899,76 +897,71 @@ window.onload = () => {
   const range = sel.getRangeAt(0);
   let node = range.startContainer;
 
-  // Walk up to get the editable block container
+  // Traverse up to find the editable .line-text block
   while (node && node !== journalContent && !node.classList.contains("line-text")) {
     node = node.parentNode;
   }
 
   if (!node) return;
 
+  const textContent = node.textContent.trim();
   const parent = node.closest(".entry-line") || node;
 
   e.preventDefault(); // Stop default Enter behavior
 
+  // ✅ Handle special shortcuts
+  if (textContent === "/todo" || textContent === "- [ ]") {
+    const checkboxBlock = document.createElement("div");
+    checkboxBlock.className = "entry-line";
+
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.onchange = saveContent;
+
+    const lineText = document.createElement("div");
+    lineText.className = "line-text";
+    lineText.contentEditable = true;
+    lineText.innerHTML = "";
+
+    checkboxBlock.appendChild(cb);
+    checkboxBlock.appendChild(lineText);
+
+    journalContent.replaceChild(checkboxBlock, parent);
+    placeCaretAtStart(lineText);
+    saveContent();
+    return;
+  }
+
+  // ✅ Regular behavior (add new block after current)
   const isInCheckbox = parent.classList.contains("entry-line");
+  const newBlock = document.createElement("div");
 
-  let newBlock;
+  if (isInCheckbox) {
+    newBlock.className = "entry-line";
 
-  // Auto-convert shortcuts
-const text = node.textContent.trim();
-if (text === "/todo" || text === "- [ ]") {
-  // Replace current plain block with checkbox block
-  const checkboxBlock = document.createElement("div");
-  checkboxBlock.className = "entry-line";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.onchange = saveContent;
 
-  const cb = document.createElement("input");
-  cb.type = "checkbox";
-  cb.onchange = saveContent;
+    const lineText = document.createElement("div");
+    lineText.className = "line-text";
+    lineText.contentEditable = true;
+    lineText.innerHTML = "";
 
-  const lineText = document.createElement("div");
-  lineText.className = "line-text";
-  lineText.contentEditable = true;
-  lineText.innerHTML = "";
+    newBlock.appendChild(cb);
+    newBlock.appendChild(lineText);
+    journalContent.insertBefore(newBlock, parent.nextSibling);
+    placeCaretAtStart(lineText);
+  } else {
+    newBlock.className = "line-text";
+    newBlock.contentEditable = true;
+    newBlock.innerHTML = "";
 
-  checkboxBlock.appendChild(cb);
-  checkboxBlock.appendChild(lineText);
+    journalContent.insertBefore(newBlock, parent.nextSibling);
+    placeCaretAtStart(newBlock);
+  }
 
-  journalContent.replaceChild(checkboxBlock, parent);
-  placeCaretAtStart(lineText);
   saveContent();
-  return;
-}
-
-// Otherwise, normal block creation:
-if (isInCheckbox) {
-  // New checkbox block
-  const newCheckbox = document.createElement("div");
-  newCheckbox.className = "entry-line";
-
-  const cb = document.createElement("input");
-  cb.type = "checkbox";
-  cb.onchange = saveContent;
-
-  const lineText = document.createElement("div");
-  lineText.className = "line-text";
-  lineText.contentEditable = true;
-  lineText.innerHTML = "";
-
-  newCheckbox.appendChild(cb);
-  newCheckbox.appendChild(lineText);
-  journalContent.insertBefore(newCheckbox, parent.nextSibling);
-  placeCaretAtStart(lineText);
-} else {
-  // New plain text block
-  const newPlain = document.createElement("div");
-  newPlain.className = "line-text";
-  newPlain.contentEditable = true;
-  newPlain.innerHTML = "";
-
-  journalContent.insertBefore(newPlain, parent.nextSibling);
-  placeCaretAtStart(newPlain);
-}
-saveContent();
 });
 
   // ✅ Global shortcuts (moved here to fix journalContent reference error)

@@ -43,6 +43,15 @@
       min-width: 0;
     }
 
+    b {
+  color: #000;
+}
+@media (prefers-color-scheme: dark) {
+  b {
+    color: #fff;
+  }
+}
+
     .card {
       border: 1px solid #444;
       border-radius: 12px;
@@ -314,11 +323,10 @@
     }
 
     @media (prefers-color-scheme: light) {
-      html, body { color: #000; }
-      .entry-line input[type="checkbox"]:checked + .line-text { color: #000; }
-      .calendar-dot { border-bottom: 2px solid #000 !important; }
+  html, body { color: #000; }
+  .entry-line input[type="checkbox"]:checked + .line-text { color: #000; }
+  .calendar-dot { border-bottom: 2px solid #000 !important; }
 
-      .popup-buttons button,
   .icon-btn,
   .add-collection-link,
   #calendar-btn {
@@ -326,9 +334,17 @@
     border-color: #000;
   }
 
+  .popup-buttons button {
+    background: #000;
+    color: #fff;
+    border-color: #000;
+  }
+
   .popup-buttons button:hover {
-    background: #eee;
-    }
+    background: #222;
+    color: #fff;
+  }
+}
 
     @media (prefers-color-scheme: dark) {
       .calendar-dot { border-bottom: 2px solid #fff !important; }
@@ -528,10 +544,23 @@ function makeAllLinesEditable() {
         }
 
         if (e.key === "Backspace" && txt.textContent.trim() === "") {
-          e.preventDefault();
-          div.remove();
-          saveContent();
-        }
+  e.preventDefault();
+
+  const parent = div.parentNode;
+  const nextFocus = div.previousElementSibling || div.nextElementSibling;
+
+  div.remove();
+
+  if (!parent.querySelector(".entry-line")) {
+    // add a new blank one
+    const fallback = addEntryLine();
+    fallback.querySelector(".line-text").focus();
+  } else if (nextFocus) {
+    nextFocus.querySelector(".line-text")?.focus();
+  }
+
+  saveContent();
+}
       });
     }
   });
@@ -690,13 +719,6 @@ document.addEventListener("keydown", e => {
   else if ((e.metaKey || e.ctrlKey) && e.key === "u") { document.execCommand("underline"); e.preventDefault(); }
   else if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) { undo(); e.preventDefault(); }
   else if ((e.metaKey || e.ctrlKey) && (e.key === "Z" || (e.shiftKey && e.key === "z"))) { redo(); e.preventDefault(); }
-  else if (e.key === "Enter" && document.activeElement.classList.contains("line-text")) {
-    e.preventDefault();
-    const currentLine = e.target.closest(".entry-line");
-const newLine = addEntryLine();
-currentLine.insertAdjacentElement("afterend", newLine);
-newLine.querySelector(".line-text").focus();
-  }
   else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "c") {
     e.preventDefault();
     const newLine = addEntryLine();

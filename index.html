@@ -377,7 +377,7 @@
       }
     }
     #command-palette {
-  position: absolute;
+  position: fixed;
   z-index: 9999;
   background: #111;
   color: #fff;
@@ -1262,8 +1262,22 @@ let selectedIndex = 0;
   const palette = commandPalette;
   palette.style.display = "block";
 
-  palette.style.left = `${rect.left - wrapperRect.left}px`;
-  palette.style.top = `${rect.bottom - wrapperRect.top + 4}px`; // add small padding
+  let left = rect.left + window.scrollX;
+let top = rect.bottom + window.scrollY + 4;
+
+const paletteWidth = 300;
+const paletteHeight = 200;
+
+if (left + paletteWidth > window.innerWidth) {
+  left = window.innerWidth - paletteWidth - 20; // 20px padding from edge
+}
+
+if (top + paletteHeight > window.innerHeight) {
+  top = rect.top + window.scrollY - paletteHeight - 10; // flip above
+}
+
+palette.style.left = `${left}px`;
+palette.style.top = `${top}px`;
   paletteActive = true;
   commandSearch.value = "";
   renderCommandOptions(COMMANDS);

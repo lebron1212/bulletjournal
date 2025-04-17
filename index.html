@@ -986,15 +986,6 @@ if (!node.classList.contains("line-text") && !parent.classList.contains("entry-l
   parent = wrapper;
 }
 
-// Slash activates command mode
-if (e.key === "/") {
-  e.preventDefault();
-  window._targetBlock = parent;
-  const rect = parent.getBoundingClientRect();
-  openCommandPalette(rect.left + 10, rect.top + 30);
-  return;
-}
-
   // If we're typing a command...
   if (isCommandMode) {
     if (e.key.length === 1 && !e.metaKey && !e.ctrlKey) {
@@ -1267,10 +1258,6 @@ function applyCommand(cmd) {
   }
 }
 </script>
-  <div id="command-palette" style="display: none;" class="popup" tabindex="-1">
-  <input id="command-search" placeholder="Type a command..." autofocus />
-  <div id="command-options"></div>
-
 <script>
 let paletteActive = false;
 let selectedIndex = 0;
@@ -1388,27 +1375,50 @@ function applyCommand(cmd) {
     saveContent();
   }
 }
+document.addEventListener("keydown", (e) => {
+  if (
+    e.key === "/" &&
+    !e.metaKey &&
+    !e.ctrlKey &&
+    !e.altKey &&
+    !e.shiftKey &&
+    !paletteActive
+  ) {
+    e.preventDefault();
 
-// Add global `/` shortcut listener
-document.addEventListener("keydown", e => {
-  if (e.key === "/" && !e.metaKey && !e.ctrlKey && !paletteActive && document.activeElement?.isContentEditable) {
     const sel = window.getSelection();
-    if (!sel.rangeCount) return;
-    const range = sel.getRangeAt(0);
-    let node = range.startContainer;
+    let node = sel?.rangeCount ? sel.getRangeAt(0).startContainer : null;
 
-    while (node && !node.classList?.contains("line-text")) {
-      node = node.parentNode;
+    while (node && node.nodeType !== 1) node = node.parentNode;
+
+    // If not in a .line-text, default to last block
+    let target = node?.closest(".line-text");
+    if (!target) {
+      const content = document.getElementById("journal-content");
+      target = content.querySelector(".line-text:last-child");
+
+      // If still no block, create one
+      if (!target) {
+        target = document.createElement("div");
+        target.className = "line-text";
+        target.contentEditable = true;
+        target.innerHTML = "";
+        content.appendChild(target);
+      }
     }
 
-    if (node) {
-      e.preventDefault();
-      const rect = node.getBoundingClientRect();
-      window._targetBlock = node.closest(".entry-line") || node;
-      openCommandPalette(rect.left + 10, rect.top + 30);
-    }
+    // Store target for command injection later
+    window._targetBlock = target;
+
+    // Get bounding box for placement
+    const rect = target.getBoundingClientRect();
+    openCommandPalette(rect.left + 10, rect.top + 30);
   }
 });
 </script>
+  <div id="command-palette" style="display: none;" class="popup" tabindex="-1">
+  <input id="command-search" placeholder="Type a command..." autofocus />
+  <div id="command-options"></div>
+</div>
 </body>
 </html>

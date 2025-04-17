@@ -33,6 +33,7 @@
       flex-shrink: 0;
       overflow-y: auto;
       max-height: calc(100vh - 60px);
+      position: relative;
     }
 
     #journal-panel {
@@ -100,14 +101,14 @@
     }
 
     #calendar-btn {
-      position: relative;
-      float: right;
-      font-size: 1rem;
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      font-size: 1.2rem;
       background: none;
       border: none;
       color: #eee;
       cursor: pointer;
-      margin-top: -6px;
     }
 
     .header {
@@ -155,15 +156,17 @@
     }
 
     .entry-line input[type="checkbox"]:checked::before {
-      content: "X";
+      content: "✕";
       color: #fff;
       font-size: 0.8rem;
       font-weight: bold;
+      display: block;
+      text-align: center;
       line-height: 1;
     }
 
     .entry-line .line-text {
-      font-size: 0.7rem;
+      font-size: 0.65rem;
       flex: 1;
       outline: none;
       min-height: 18px;
@@ -251,6 +254,18 @@
       }
       .entry-line input[type="checkbox"]:checked::before {
         color: #000;
+      }
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .calendar-dot {
+        border-bottom: 2px solid #fff !important;
+      }
+    }
+
+    @media (prefers-color-scheme: light) {
+      .calendar-dot {
+        border-bottom: 2px solid #000 !important;
       }
     }
 

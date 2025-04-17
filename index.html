@@ -624,26 +624,6 @@ function redo() {
   }
 }
 
-document.addEventListener("keydown", e => {
-  if ((e.metaKey || e.ctrlKey) && e.key === "b") { document.execCommand("bold"); e.preventDefault(); }
-  else if ((e.metaKey || e.ctrlKey) && e.key === "i") { document.execCommand("italic"); e.preventDefault(); }
-  else if ((e.metaKey || e.ctrlKey) && e.key === "u") { document.execCommand("underline"); e.preventDefault(); }
-  else if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) { undo(); e.preventDefault(); }
-  else if ((e.metaKey || e.ctrlKey) && (e.key === "Z" || (e.shiftKey && e.key === "z"))) { redo(); e.preventDefault(); }
-  else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "c") {
-  e.preventDefault();
-  const newDiv = document.createElement("div");
-  newDiv.innerHTML = "<br>";
-  journalContent.appendChild(newDiv);
-  placeCaretAtStart(newDiv);
-  saveContent();
-}
-});
-  journalContent.addEventListener("input", () => {
-  saveContent();
-});
-
-
 // RECENTS
 function renderRecents() {
   const box = document.getElementById("recent-entries");
@@ -878,66 +858,6 @@ function renderCollections(slugs) {
   });
 }
 
-  // ----------------------
-// NOTION-LIKE EDITING LOGIC
-// ----------------------
-
-const journalContent = document.getElementById("journal-content");
-
-journalContent.addEventListener("keydown", (e) => {
-  const sel = window.getSelection();
-  if (!sel.rangeCount) return;
-  const range = sel.getRangeAt(0);
-  const currentBlock = range.startContainer.closest("div");
-
-  if (e.key === "Enter") {
-    e.preventDefault();
-
-    // SHIFT+ENTER → insert checkbox block
-    if (e.shiftKey) {
-      const checkboxDiv = document.createElement("div");
-      checkboxDiv.className = "entry-line";
-
-      const cb = document.createElement("input");
-      cb.type = "checkbox";
-      cb.onchange = saveContent;
-
-      const text = document.createElement("div");
-      text.className = "line-text";
-      text.contentEditable = true;
-      text.innerHTML = "";
-
-      checkboxDiv.appendChild(cb);
-      checkboxDiv.appendChild(text);
-
-      journalContent.insertBefore(checkboxDiv, currentBlock.nextSibling);
-      placeCaretAtStart(text);
-    } else {
-      // ENTER → new regular block
-      const newDiv = document.createElement("div");
-      newDiv.innerHTML = "<br>";
-      journalContent.insertBefore(newDiv, currentBlock.nextSibling);
-      placeCaretAtStart(newDiv);
-    }
-
-    saveContent();
-  }
-
-  if (e.key === "Backspace") {
-    // Handle backspace at empty block
-    const isEmpty = currentBlock && currentBlock.textContent.trim() === "";
-    const isLineText = currentBlock && currentBlock.classList.contains("line-text");
-
-    if (isEmpty && currentBlock && !isLineText) {
-      e.preventDefault();
-      const prev = currentBlock.previousElementSibling;
-      currentBlock.remove();
-      if (prev) placeCaretAtEnd(prev);
-      saveContent();
-    }
-  }
-});
-
 // Utility: Place caret at start of node
 function placeCaretAtStart(node) {
   const range = document.createRange();
@@ -963,25 +883,120 @@ function placeCaretAtEnd(node) {
 
 // INIT
 window.onload = () => {
+  const journalContent = document.getElementById("journal-content");
+
+  // 🧠 In-block keydown listener for editing logic
+  journalContent.addEventListener("keydown", (e) => {
+    const sel = window.getSelection();
+    if (!sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    const currentBlock = range.startContainer.closest("div");
+
+    if (e.key === "Enter") {
+      e.preventDefault();
+
+      // SHIFT+ENTER → insert checkbox block
+      if (e.shiftKey) {
+        const checkboxDiv = document.createElement("div");
+        checkboxDiv.className = "entry-line";
+
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.onchange = saveContent;
+
+        const text = document.createElement("div");
+        text.className = "line-text";
+        text.contentEditable = true;
+        text.innerHTML = "";
+
+        checkboxDiv.appendChild(cb);
+        checkboxDiv.appendChild(text);
+
+        journalContent.insertBefore(checkboxDiv, currentBlock.nextSibling);
+        placeCaretAtStart(text);
+      } else {
+        // ENTER → new regular block
+        const newDiv = document.createElement("div");
+        newDiv.innerHTML = "<br>";
+        journalContent.insertBefore(newDiv, currentBlock.nextSibling);
+        placeCaretAtStart(newDiv);
+      }
+
+      saveContent();
+    }
+
+    if (e.key === "Backspace") {
+      // Handle backspace at empty block
+      const isEmpty = currentBlock && currentBlock.textContent.trim() === "";
+      const isLineText = currentBlock && currentBlock.classList.contains("line-text");
+
+      if (isEmpty && currentBlock && !isLineText) {
+        e.preventDefault();
+        const prev = currentBlock.previousElementSibling;
+        currentBlock.remove();
+        if (prev) placeCaretAtEnd(prev);
+        saveContent();
+      }
+    }
+  });
+
+  // ✅ Global shortcuts (moved here to fix journalContent reference error)
+  document.addEventListener("keydown", (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "b") {
+      document.execCommand("bold");
+      e.preventDefault();
+    } else if ((e.metaKey || e.ctrlKey) && e.key === "i") {
+      document.execCommand("italic");
+      e.preventDefault();
+    } else if ((e.metaKey || e.ctrlKey) && e.key === "u") {
+      document.execCommand("underline");
+      e.preventDefault();
+    } else if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
+      undo();
+      e.preventDefault();
+    } else if ((e.metaKey || e.ctrlKey) && (e.key === "Z" || (e.shiftKey && e.key === "z"))) {
+      redo();
+      e.preventDefault();
+    } else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "c") {
+      e.preventDefault();
+      const newDiv = document.createElement("div");
+      newDiv.innerHTML = "<br>";
+      journalContent.appendChild(newDiv);
+      placeCaretAtStart(newDiv);
+      saveContent();
+    }
+  });
+
+  // Save on input
+  journalContent.addEventListener("input", () => {
+    saveContent();
+  });
+
+  // Load & init
   recentEntries = JSON.parse(localStorage.getItem("recent-entries") || "[]");
   renderRecents();
   loadCollectionsList();
+
   const today = getTodaySlug();
   const yest = getTodaySlug(-1);
   const tomo = getTodaySlug(1);
+
   document.querySelector('[data-entry="today"]').onclick = () =>
     loadContent("daily", today, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${today}.html`);
   document.querySelector('[data-entry="yesterday"]').onclick = () =>
     loadContent("daily", yest, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${yest}.html`);
   document.querySelector('[data-entry="tomorrow"]').onclick = () =>
     loadContent("daily", tomo, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${tomo}.html`);
+
   loadContent("daily", today, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${today}.html`);
+
+  // Focus line-text on entry line click
   document.getElementById("journal-content").addEventListener("click", e => {
-  const target = e.target.closest(".entry-line");
-  if (target && !e.target.classList.contains("line-text")) {
-    const text = target.querySelector(".line-text");
-    if (text) text.focus();
-   }
+    const target = e.target.closest(".entry-line");
+    if (target && !e.target.classList.contains("line-text")) {
+      const text = target.querySelector(".line-text");
+      if (text) text.focus();
+    }
   });
 };
 </script>

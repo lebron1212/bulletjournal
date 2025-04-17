@@ -369,7 +369,7 @@
       }
     }
     #command-palette {
-  position: fixed;
+  position: absolute;
   z-index: 9999;
   background: #111;
   color: #fff;
@@ -410,6 +410,11 @@
   color: #fff;
   font-weight: bold;
 }
+    #journal-wrapper {
+  position: relative;
+  flex: 1;
+  overflow-y: auto;
+}
 
   </style>
 </head>
@@ -444,7 +449,9 @@
           <div id="entry-date">MON, APR 14</div>
         </div>
       </div>
-      <div id="journal-content" class="notes" contenteditable="true" spellcheck="false"></div>
+      <div id="journal-wrapper">
+  <div id="journal-content" class="notes" contenteditable="true" spellcheck="false"></div>
+</div>
     </div>
   </div>
 
@@ -1198,12 +1205,15 @@ function openCommandPalette() {
   const range = sel.getRangeAt(0).cloneRange();
   const rect = range.getBoundingClientRect();
 
+  const wrapper = document.getElementById("journal-wrapper");
+  const wrapperRect = wrapper.getBoundingClientRect();
+
   const palette = commandPalette;
   palette.style.display = "block";
 
-  // Position palette below the caret
-  palette.style.left = `${rect.left}px`;
-  palette.style.top = `${rect.bottom + window.scrollY}px`;
+  // Position relative to journal-wrapper
+  palette.style.left = `${rect.left - wrapperRect.left}px`;
+  palette.style.top = `${rect.bottom - wrapperRect.top}px`;
 
   paletteActive = true;
   commandSearch.value = "";

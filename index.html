@@ -475,6 +475,7 @@ function smoothEntryTransition(newHtml) {
   setTimeout(() => {
     content.innerHTML = newHtml;
     ensureEditableLine();
+    makeAllLinesEditable();
     pushUndoState();
     content.style.opacity = 1;
   }, 120);

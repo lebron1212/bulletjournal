@@ -1078,6 +1078,15 @@ bindPopupKeys('delete-popup', confirmDelete, hideDeletePopup);
     return;
   }
 
+     if (e.key === "Enter" && (!active || active === journalContent)) {
+    e.preventDefault();
+    const newBlock = createLineBlock("text");
+    journalContent.appendChild(newBlock);
+    placeCaretAtStart(newBlock);
+    saveContent();
+    return;
+  }
+
   // COMMAND MODE (/)
   if (e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey) {
     isCommandMode = true;

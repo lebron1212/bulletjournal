@@ -1000,8 +1000,6 @@ function renderCollections(slugs) {
   });
 }
 
-  let journalContent;
-
   function createLineBlock(type = "text", text = "") {
   const block = document.createElement("div");
 
@@ -1058,14 +1056,14 @@ window.onload = () => {
   bindPopupKeys('collection-popup', createCollection, toggleCollectionPopup);
 bindPopupKeys('rename-popup', confirmRename, hideRenamePopup);
 bindPopupKeys('delete-popup', confirmDelete, hideDeletePopup);
-  journalContent = document.getElementById("journal-content");
- journalContent.addEventListener("keydown", (e) => {
+journalContent = document.getElementById("journal-content");
+journalContent.addEventListener("keydown", (e) => {
   const active = document.activeElement;
   if (!active || !active.isContentEditable) return;
 
   const parent = active.closest(".entry-line") || active;
 
-  // ENTER adds a new block
+  // ENTER adds new block below
   if (e.key === "Enter") {
     e.preventDefault();
 
@@ -1074,15 +1072,6 @@ bindPopupKeys('delete-popup', confirmDelete, hideDeletePopup);
 
     journalContent.insertBefore(newBlock, parent.nextSibling);
     placeCaretAtStart(newBlock.querySelector(".line-text") || newBlock);
-    saveContent();
-    return;
-  }
-
-     if (e.key === "Enter" && (!active || active === journalContent)) {
-    e.preventDefault();
-    const newBlock = createLineBlock("text");
-    journalContent.appendChild(newBlock);
-    placeCaretAtStart(newBlock);
     saveContent();
     return;
   }
@@ -1104,7 +1093,6 @@ bindPopupKeys('delete-popup', confirmDelete, hideDeletePopup);
     return;
   }
 });
-
 
   // ✅ Global shortcuts (moved here to fix journalContent reference error)
   document.addEventListener("keydown", (e) => {
@@ -1347,6 +1335,7 @@ document.addEventListener("keydown", (e) => {
     closeCommandPalette();
   }
 });
+};
 </script>
 </body>
 </html>

@@ -1116,7 +1116,7 @@ if (selectedCalendarDate && selectedCalendarDate === `${year}-${String(month + 1
       day.classList.add("calendar-selected");
     }
     day.onclick = () => {
-      selectedCalendarDate = ${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")};
+selectedCalendarDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
       calendarCreateBtn.disabled = false;
       renderCalendar();
     };

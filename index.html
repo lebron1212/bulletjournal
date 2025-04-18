@@ -431,6 +431,17 @@ li.line-text {
   cursor: pointer;
   font-size: 0.75rem;
 }
+   
+  li.line-text::marker {
+  content: '• ';
+  color: #eee; /* default: dark mode */
+}
+
+@media (prefers-color-scheme: light) {
+  li.line-text::marker {
+    color: #000;
+  }
+}
 
 .command-option.active {
   background: #444;

@@ -1426,7 +1426,7 @@ journalContent.addEventListener("keydown", (e) => {
   
   // ✅ Global shortcuts (moved here to fix journalContent reference error)
   document.addEventListener("keydown", (e) => {
-    } else if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
+   if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
       undo();
       e.preventDefault();
     } else if ((e.metaKey || e.ctrlKey) && (e.key === "Z" || (e.shiftKey && e.key === "z"))) {

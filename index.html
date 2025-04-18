@@ -1184,28 +1184,33 @@ journalContent.addEventListener("keydown", (e) => {
   const range = sel.getRangeAt(0);
   if (range.startOffset > 0) return;
 
-  const parent = active.closest(".entry-line, li.line-text, .line-text"); // any known block
+  const parent = active.closest(".entry-line, li.line-text, .line-text");
   if (!parent) return;
 
   const prev = parent.previousElementSibling;
-  const activeText = active.textContent.trim();
+  const contentEditable = active.closest("[contenteditable]");
+  const activeText = contentEditable?.textContent?.trim() || "";
 
-  // Get plain editable content element
+  // Get plain editable element to focus later
   const prevEditable = prev?.querySelector("[contenteditable]") || prev;
 
-  // 1️⃣ If block is empty and is NOT plain text — strip formatting
-  if (activeText === "" && parent !== active && parent !== active.parentElement) {
+  // 🔁 Determine if this is a "formatted" block (checkbox or list)
+  const isCheckboxBlock = parent.classList.contains("entry-line") && parent.querySelector('input[type="checkbox"]');
+  const isListItemBlock = parent.tagName === "LI" && parent.classList.contains("line-text");
+
+  // 1️⃣ If it's a checkbox or list item and it's empty — convert to plain text
+  if (activeText === "" && (isCheckboxBlock || isListItemBlock)) {
     e.preventDefault();
 
-    const plain = createLineBlock("text", "");
-    journalContent.replaceChild(plain, parent);
-    placeCaretAtStart(plain);
+    const plainBlock = createLineBlock("text", "");
+    journalContent.replaceChild(plainBlock, parent);
+    placeCaretAtStart(plainBlock);
     saveContent();
     return;
   }
 
-  // 2️⃣ If it's an empty plain text line — delete and move caret to end of previous
-  if (activeText === "" && parent === active) {
+  // 2️⃣ If it's an empty plain line — remove and move caret to end of previous
+  if (activeText === "" && parent === contentEditable) {
     e.preventDefault();
     parent.remove();
     if (prevEditable) placeCaretAtEnd(prevEditable);
@@ -1213,7 +1218,7 @@ journalContent.addEventListener("keydown", (e) => {
     return;
   }
 
-  // 3️⃣ Fallback merge behavior
+  // 3️⃣ Otherwise, merge into previous line
   if (activeText.length > 0 && prevEditable) {
     e.preventDefault();
     parent.remove();

@@ -1317,7 +1317,7 @@ journalContent.addEventListener("keydown", (e) => {
   const caretOffset = range?.startOffset ?? 0;
 
   // ENTER
-  = "Enter" && !e.shiftKey) {
+  if (e.key === "Enter" && !e.shiftKey) {
   e.preventDefault();
 
   const selection = window.getSelection();

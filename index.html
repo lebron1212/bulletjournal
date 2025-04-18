@@ -1177,32 +1177,52 @@ journalContent.addEventListener("keydown", (e) => {
     return;
   }
 
-  // --- BACKSPACE KEY ---
-  if (e.key === "Backspace") {
-    const sel = window.getSelection();
-    if (!sel.isCollapsed) return; // Don't interfere with range deletions
+ if (e.key === "Backspace") {
+  const sel = window.getSelection();
+  if (!sel.isCollapsed) return;
 
-    const range = sel.getRangeAt(0);
-    if (range.startOffset > 0) return; // Caret is not at start
+  const range = sel.getRangeAt(0);
+  if (range.startOffset > 0) return;
 
-    const prev = parent.previousElementSibling;
-    if (!prev) return;
+  const parent = active.closest(".entry-line, li.line-text, .line-text"); // any known block
+  if (!parent) return;
 
+  const prev = parent.previousElementSibling;
+  const activeText = active.textContent.trim();
+
+  // Get plain editable content element
+  const prevEditable = prev?.querySelector("[contenteditable]") || prev;
+
+  // 1️⃣ If block is empty and is NOT plain text — strip formatting
+  if (activeText === "" && parent !== active && parent !== active.parentElement) {
     e.preventDefault();
 
-    const activeText = active.textContent;
-    const prevEditable = prev.querySelector(".line-text") || prev.querySelector(".line-text-inner") || prev;
-
-    // Remove current block
-    parent.remove();
-
-    // Merge content
-    placeCaretAtEnd(prevEditable);
-    document.execCommand("insertText", false, activeText);
-
+    const plain = createLineBlock("text", "");
+    journalContent.replaceChild(plain, parent);
+    placeCaretAtStart(plain);
     saveContent();
     return;
   }
+
+  // 2️⃣ If it's an empty plain text line — delete and move caret to end of previous
+  if (activeText === "" && parent === active) {
+    e.preventDefault();
+    parent.remove();
+    if (prevEditable) placeCaretAtEnd(prevEditable);
+    saveContent();
+    return;
+  }
+
+  // 3️⃣ Fallback merge behavior
+  if (activeText.length > 0 && prevEditable) {
+    e.preventDefault();
+    parent.remove();
+    placeCaretAtEnd(prevEditable);
+    document.execCommand("insertText", false, active.textContent);
+    saveContent();
+    return;
+  }
+}
 
   // --- COMMAND MODE (/)
   if (e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey) {

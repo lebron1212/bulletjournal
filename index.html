@@ -442,25 +442,23 @@ li.line-text {
     color: #000;
   }
 }
-    li.line-text {
-  list-style: disc;
+  li.line-text {
+  display: list-item !important;
+  list-style-type: disc;
   margin-left: 20px;
   color: #eee;
   font-size: 0.75rem;
-  position: relative;
   text-transform: none;
 }
 
-/* The actual editable area inside the bullet */
 li.line-text > .line-text-inner {
-  display: inline-block;
+  display: inline !important;
   width: 100%;
   color: inherit;
   outline: none;
   background: transparent;
 }
 
-/* Light mode support */
 @media (prefers-color-scheme: light) {
   li.line-text {
     color: #000;

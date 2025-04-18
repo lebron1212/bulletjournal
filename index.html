@@ -1176,8 +1176,7 @@ journalContent.addEventListener("keydown", (e) => {
     saveContent();
     return;
   }
-
- if (e.key === "Backspace") {
+if (e.key === "Backspace") {
   const sel = window.getSelection();
   if (!sel.isCollapsed) return;
 
@@ -1194,7 +1193,7 @@ journalContent.addEventListener("keydown", (e) => {
 
   const prevEditable = prev?.querySelector("[contenteditable]") || prev;
 
-  // 🔁 Convert empty checkbox to plain text (iframe-proof)
+  // 🔁 Convert empty checkbox to plain text — iframe safe
   if (activeText === "" && isCheckboxBlock) {
     e.preventDefault();
 
@@ -1203,17 +1202,17 @@ journalContent.addEventListener("keydown", (e) => {
 
     const editable = plain.querySelector("[contenteditable]") || plain;
 
-    // ⛑ In iframe/Notion sandbox, delay is critical
+    // ✅ Delayed focus ensures iframe + DOM reflow plays nice
     setTimeout(() => {
       editable.focus();
       placeCaretAtStart(editable);
-    }, 10);
+    }, 0);
 
     saveContent();
     return;
   }
 
-  // 🧹 Convert wrapped empty element
+  // 🧹 Convert any other empty wrapped element to plain
   if (activeText === "" && parent !== active && parent !== active.parentElement) {
     e.preventDefault();
 
@@ -1221,42 +1220,49 @@ journalContent.addEventListener("keydown", (e) => {
     journalContent.replaceChild(plain, parent);
 
     const editable = plain.querySelector("[contenteditable]") || plain;
+
     setTimeout(() => {
       editable.focus();
       placeCaretAtStart(editable);
-    }, 10);
+    }, 0);
 
     saveContent();
     return;
   }
 
-  // 🗑 Remove plain empty line
+  // 🗑 Remove empty plain block
   if (activeText === "" && parent === active) {
     e.preventDefault();
     parent.remove();
+
     if (prevEditable) {
       setTimeout(() => {
         prevEditable.focus();
         placeCaretAtEnd(prevEditable);
-      }, 10);
+      }, 0);
     }
+
     saveContent();
     return;
   }
 
-  // ➕ Merge into previous line
+  // ➕ Merge text into previous
   if (activeText.length > 0 && prevEditable) {
     e.preventDefault();
     parent.remove();
+
     setTimeout(() => {
       prevEditable.focus();
       placeCaretAtEnd(prevEditable);
       document.execCommand("insertText", false, active.textContent);
-    }, 10);
+    }, 0);
+
     saveContent();
     return;
   }
 }
+
+  
   // --- COMMAND MODE (/)
   if (e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey) {
     isCommandMode = true;

@@ -64,6 +64,25 @@
       font-weight: 700;
     }
 
+    ul {
+  list-style-type: disc;
+  margin: 0 0 14px 20px;
+  padding-left: 20px;
+}
+
+li.line-text {
+  color: #eee;
+  font-size: 0.75rem;
+  margin-bottom: 6px;
+  text-transform: none;
+}
+@media (prefers-color-scheme: light) {
+  li.line-text {
+    color: #000;
+  }
+}
+
+
     .line-text:not(.entry-line .line-text) {
   display: block;
   padding-left: 20px; /* visually align with checkbox blocks */

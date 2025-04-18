@@ -177,12 +177,19 @@ li.line-text {
 
     .entry-line {
   display: flex;
+  padding-left: 20px;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 14px;
-  padding: 4px 0;
+  gap: 6px;
+  margin-bottom: 6px;
+  padding: 2px 0;
 }
-
+    
+.entry-line .line-text,
+.line-text,
+li.line-text {
+  font-size: 0.7rem !important; /* ✅ small, uniform */
+}
+    
     .entry-line input[type="checkbox"] {
   appearance: none;
   width: 18px;
@@ -710,9 +717,9 @@ let commandBuffer = "";
     inner = document.createElement("div");
     inner.className = "line-text";
     inner.contentEditable = true;
-    inner.innerText = block.content;
+    inner.innerHTML = block.content;
     inner.oninput = () => {
-      block.content = inner.innerText;
+      block.content = inner.innerHTML;
       saveBlocks();
     };
 
@@ -723,18 +730,18 @@ let commandBuffer = "";
   const li = document.createElement("li");
   li.className = "line-text";
   li.contentEditable = true;
-  li.innerText = block.content;
+  li.innerHTML = block.content;
   li.oninput = () => {
-    block.content = li.innerText;
+    block.content = li.innerHTML;
     saveBlocks();
   };
   return li;
   } else {
     wrapper.className = "line-text";
     wrapper.contentEditable = true;
-    wrapper.innerText = block.content;
+    wrapper.innerHTML = block.content;
     wrapper.oninput = () => {
-      block.content = wrapper.innerText;
+      block.content = wrapper.innerHTML;
       saveBlocks();
     };
   }
@@ -871,14 +878,14 @@ function forceCheckboxAttrs() {
     // ✅ Checkbox block
     if (node.classList.contains("entry-line")) {
       const input = node.querySelector('input[type="checkbox"]');
-      const text = node.querySelector(".line-text")?.innerText || "";
+      const text = node.querySelector(".line-text")?.innerHTML || "";
       parsed.push(createBlock("todo", text.trim(), { checked: input?.checked || false }));
       continue;
     }
 
     // ✅ Plain text block
     if (node.classList.contains("line-text")) {
-      parsed.push(createBlock("text", node.innerText.trim()));
+      parsed.push(createBlock("text", node.innerHTML.trim()));
       continue;
     }
 
@@ -886,7 +893,7 @@ function forceCheckboxAttrs() {
     if (node.tagName === "UL") {
   const items = node.querySelectorAll("li.line-text");
   items.forEach(li => {
-    parsed.push(createBlock("list", li.innerText.trim()));
+    parsed.push(createBlock("list", li.innerHTML.trim()));
   });
   continue;
 }
@@ -1181,7 +1188,7 @@ function renderCollections(slugs) {
 
     const rename = document.createElement("button");
     rename.className = "icon-btn";
-    rename.innerText = "✎";
+    rename.innerHTML = "✎";
     rename.onclick = e => {
       e.stopPropagation();
       window._renameTarget = slug;
@@ -1191,7 +1198,7 @@ function renderCollections(slugs) {
 
     const del = document.createElement("button");
     del.className = "icon-btn";
-    del.innerText = "✕";
+    del.innerHTML = "✕";
     del.onclick = e => {
       e.stopPropagation();
       window._deleteTarget = slug;
@@ -1286,7 +1293,7 @@ journalContent.addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
     e.preventDefault();
 
-    const text = active.innerText;
+    const text = active.innerHTML;
     const before = text.slice(0, caretOffset);
     const after = text.slice(caretOffset);
 
@@ -1453,17 +1460,14 @@ document.getElementById("journal-content").addEventListener("click", e => {
     return;
   }
 
-  // ✅ If you clicked empty space in journal-content — append a new line
-  if (target === content || content.contains(target)) {
-    // Make sure you didn't click *on* something already
-    const isBlankClick = [...content.children].every(child => !child.contains(target));
-    if (isBlankClick) {
-      const newLine = createLineBlock("text", "");
-      content.appendChild(newLine);
-      placeCaretAtStart(newLine);
-      saveContent();
-    }
-  }
+  if (target === content && target === content.lastElementChild) {
+  const newBlock = createBlock(\"text\", \"\");
+  blocks.push(newBlock);
+  renderBlocks();
+  const el = document.querySelector(`[data-id=\"${newBlock.id}\"]`);
+  if (el) placeCaretAtStart(el);
+  saveBlocks();
+}
 });
 
   const commandPalette = document.getElementById("command-palette");
@@ -1584,7 +1588,7 @@ function applyCommand(cmd) {
   if (cmd === "/todo") {
     block.type = "todo";
     block.props = { checked: false };
-    block.content = ""; // Clear content after command
+    // Retain text
   } else if (cmd === "/divider") {
     const divider = createBlock("divider", "");
     blocks.splice(blockIndex + 1, 0, divider);

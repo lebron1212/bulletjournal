@@ -190,7 +190,7 @@ li.line-text {
   font-size: 0.7rem !important; /* ✅ small, uniform */
 }
     
-    .entry-line input[type="checkbox"] {
+.entry-line input[type="checkbox"] {
   appearance: none;
   width: 18px;
   height: 18px;
@@ -201,24 +201,31 @@ li.line-text {
   cursor: pointer;
   flex-shrink: 0;
   pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: bold;
+  color: #fff;
 }
-    
+
 .entry-line input[type="checkbox"]::before {
-  content: '';
-  display: block;
-  width: 100%;
-  height: 100%;
+  content: "";
+  display: none; /* Hides default empty block */
 }
 
 .entry-line input[type="checkbox"]:checked::before {
   content: "X";
+  display: block;
   position: absolute;
-  color: #fff;
-  font-size: 0.7rem;
-  font-weight: bold;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  font-size: 0.7rem;
+  font-weight: bold;
+  line-height: 1;
+  color: #fff;
+  pointer-events: none;
 }
 
 
@@ -608,16 +615,10 @@ function createBlock(type = "text", content = "", props = {}) {
   };
 }
 
-
 function getTodaySlug(offset = 0) {
   const now = new Date();
-
-  // Adjust for local time zone offset in minutes
-  const localOffset = now.getTimezoneOffset(); // in minutes
-  const adjusted = new Date(now.getTime() - localOffset * 60000);
-
-  adjusted.setDate(adjusted.getDate() + offset);
-  return adjusted.toISOString().slice(0, 10);
+  now.setDate(now.getDate() + offset);
+  return now.toISOString().slice(0, 10);
 }
 
 function encodeHTML(str) {
@@ -1299,6 +1300,17 @@ window.onload = () => {
   bindPopupKeys('collection-popup', createCollection, toggleCollectionPopup);
 bindPopupKeys('rename-popup', confirmRename, hideRenamePopup);
 bindPopupKeys('delete-popup', confirmDelete, hideDeletePopup);
+    bindPopupKeys('calendar-popup', () => {
+    if (!selectedCalendarDate) return;
+    calendarPopup.style.display = "none";
+    loadContent("daily", selectedCalendarDate, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${selectedCalendarDate}.html`);
+    setTimeout(() => {
+      const editable = document.querySelector('#journal-content .line-text');
+      if (editable) placeCaretAtEnd(editable);
+    }, 250);
+  }, () => {
+    calendarPopup.style.display = "none";
+  });
 journalContent = document.getElementById("journal-content");
 journalContent.addEventListener("keydown", (e) => {
   const active = document.activeElement;

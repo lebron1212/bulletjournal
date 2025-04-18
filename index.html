@@ -941,9 +941,9 @@ function forceCheckboxAttrs() {
       const checked = block.props?.checked ? ' checked="checked"' : '';
       html += `<div class="entry-line"><input type="checkbox"${checked}><div class="line-text" contenteditable="true">${block.content}</div></div>\n`;
     } else if (block.type === "divider") {
-      html += <hr>\n;
+      html += `<hr>\n`;
     } else if (block.type === "list") {
-      listBuffer.push(<li class="line-text">${block.content}</li>);
+      listBuffer.push(`<li class="line-text">${block.content}</li>`);
     } else {
       if (listBuffer.length) {
         html += <ul>\n${listBuffer.join("\n")}\n</ul>\n;
@@ -954,7 +954,7 @@ function forceCheckboxAttrs() {
   }
 
   if (listBuffer.length) {
-    html += <ul>\n${listBuffer.join("\n")}\n</ul>\n;
+    html += `<ul>\n${listBuffer.join("\n")}\n</ul>\n`;
   }
 
   return html;

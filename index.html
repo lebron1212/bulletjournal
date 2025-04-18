@@ -1496,24 +1496,6 @@ journalContent.addEventListener("keydown", (e) => {
     return;
   }
 });
-
-  // COMMAND MODE
-  if (e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey) {
-    isCommandMode = true;
-    commandBuffer = "/";
-    window._targetBlock = parent;
-    openCommandPalette();
-    return;
-  }
-
-  if (e.key === "Escape" && isCommandMode) {
-    isCommandMode = false;
-    commandBuffer = "";
-    closeCommandPalette();
-    return;
-  }
-});
-
   
   // ✅ Global shortcuts (moved here to fix journalContent reference error)
   document.addEventListener("keydown", (e) => {

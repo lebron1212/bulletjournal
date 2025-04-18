@@ -1139,56 +1139,72 @@ journalContent.addEventListener("keydown", (e) => {
 
   const parent = active.closest(".entry-line") || active;
 
-  // ENTER adds new block below
-if (e.key === "Enter") {
-  e.preventDefault();
+  // --- ENTER KEY ---
+  if (e.key === "Enter") {
+    e.preventDefault();
 
-  const isListItem = parent.textContent.trim().startsWith('- ');
-  let newBlock;
-
-  if (isListItem) {
-    // Create a <ul><li>...</li></ul> block
-    const ul = document.createElement('ul');
-    ul.style.margin = '0 0 14px 20px';
-    ul.style.padding = '0';
-    ul.style.listStyle = 'disc';
-
-    const li = document.createElement('li');
-    li.className = 'line-text';
-    li.contentEditable = true;
-    li.textContent = '';
-
-    ul.appendChild(li);
-    newBlock = ul;
-
-    // Replace current block with a list if needed
-    const parentContent = parent.textContent.trim().slice(2); // remove `- `
-    const prevLi = document.createElement('li');
-    prevLi.className = 'line-text';
-    prevLi.contentEditable = true;
-    prevLi.textContent = parentContent;
-
-    const existingUl = document.createElement('ul');
-    existingUl.style.margin = '0 0 14px 20px';
-    existingUl.style.padding = '0';
-    existingUl.style.listStyle = 'disc';
-    existingUl.appendChild(prevLi);
-    existingUl.appendChild(li);
-
-    journalContent.replaceChild(existingUl, parent);
-    placeCaretAtStart(li);
-  } else {
     const isCheckbox = parent.classList.contains("entry-line");
-    newBlock = createLineBlock(isCheckbox ? "checkbox" : "text");
-    journalContent.insertBefore(newBlock, parent.nextSibling);
-    placeCaretAtStart(newBlock.querySelector(".line-text") || newBlock);
+    const isListItem = active.textContent.trim().startsWith('- ');
+
+    let newBlock;
+
+    if (isListItem) {
+      const ul = document.createElement('ul');
+      ul.style.margin = '0 0 14px 20px';
+      ul.style.padding = '0';
+      ul.style.listStyle = 'disc';
+
+      const li = document.createElement('li');
+      li.className = 'line-text';
+
+      const editable = document.createElement('div');
+      editable.className = 'line-text-inner';
+      editable.contentEditable = true;
+
+      li.appendChild(editable);
+      ul.appendChild(li);
+
+      journalContent.insertBefore(ul, parent.nextSibling);
+      placeCaretAtStart(editable);
+    } else {
+      newBlock = createLineBlock(isCheckbox ? "checkbox" : "text");
+      journalContent.insertBefore(newBlock, parent.nextSibling);
+      const focusTarget = newBlock.querySelector(".line-text") || newBlock;
+      placeCaretAtStart(focusTarget);
+    }
+
+    saveContent();
+    return;
   }
 
-  saveContent();
-  return;
-}
+  // --- BACKSPACE KEY ---
+  if (e.key === "Backspace") {
+    const sel = window.getSelection();
+    if (!sel.isCollapsed) return; // Don't interfere with range deletions
 
-  // COMMAND MODE (/)
+    const range = sel.getRangeAt(0);
+    if (range.startOffset > 0) return; // Caret is not at start
+
+    const prev = parent.previousElementSibling;
+    if (!prev) return;
+
+    e.preventDefault();
+
+    const activeText = active.textContent;
+    const prevEditable = prev.querySelector(".line-text") || prev.querySelector(".line-text-inner") || prev;
+
+    // Remove current block
+    parent.remove();
+
+    // Merge content
+    placeCaretAtEnd(prevEditable);
+    document.execCommand("insertText", false, activeText);
+
+    saveContent();
+    return;
+  }
+
+  // --- COMMAND MODE (/)
   if (e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey) {
     isCommandMode = true;
     commandBuffer = "/";
@@ -1197,7 +1213,7 @@ if (e.key === "Enter") {
     return;
   }
 
-  // ESCAPE cancels command mode
+  // --- ESC cancels command mode
   if (e.key === "Escape" && isCommandMode) {
     isCommandMode = false;
     commandBuffer = "";
@@ -1205,7 +1221,7 @@ if (e.key === "Enter") {
     return;
   }
 });
-
+  
   // ✅ Global shortcuts (moved here to fix journalContent reference error)
   document.addEventListener("keydown", (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "b") {

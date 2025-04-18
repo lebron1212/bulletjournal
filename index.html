@@ -1620,8 +1620,8 @@ if (top + paletteHeight > window.innerHeight) {
   top = rect.top + window.scrollY - paletteHeight - 10; // flip above
 }
 
-palette.style.left = ${left}px;
-palette.style.top = ${top}px;
+palette.style.left = `${left}px`;
+palette.style.top = `${top}px`;
   paletteActive = true;
   commandSearch.value = "";
   renderCommandOptions(COMMANDS);

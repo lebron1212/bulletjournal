@@ -1565,7 +1565,7 @@ document.getElementById("journal-content").addEventListener("click", e => {
   const newBlock = createBlock("text", "");
   blocks.push(newBlock);
   renderBlocks();
-  const el = document.querySelector([data-id=\"${newBlock.id}\"]);
+const el = document.querySelector(`[data-id="${newBlock.id}"]`);
   if (el) placeCaretAtStart(el);
   saveBlocks();
 }

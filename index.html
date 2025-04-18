@@ -1101,7 +1101,7 @@ function renderCalendar() {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const dots = getDotDaysForMonth(year, month);
   calendarGrid.innerHTML = "";
-  calendarMonthLabel.textContent = ${calendarDate.toLocaleString('default', { month: 'long' })} ${year};
+calendarMonthLabel.textContent = `${calendarDate.toLocaleString('default', { month: 'long' })} ${year}`;
   for (let i = 0; i < firstDay; i++) calendarGrid.appendChild(document.createElement("div"));
   for (let d = 1; d <= daysInMonth; d++) {
     const day = document.createElement("div");

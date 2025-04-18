@@ -1188,7 +1188,7 @@ const html = `<!-- version:${new Date().toISOString()} -->\n<div class="line-tex
     const updated = Array.from(new Set([name, ...existing]));
 
     localStorage.setItem(localKey, JSON.stringify(updated));
-    localStorage.setItem(${localKey}-version, now); // 🔥 store version timestamp
+localStorage.setItem(`${localKey}-version`, now);
     renderCollections(updated);
     loadContent("collection", name, name, `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/collections/collection-${name}.html`);
 

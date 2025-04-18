@@ -1320,12 +1320,29 @@ journalContent.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) {
   e.preventDefault();
 
-  const text = active.innerHTML || "";
-  const before = text.slice(0, caretOffset);
-  const after = text.slice(caretOffset);
+  const selection = window.getSelection();
+  const range = selection.getRangeAt(0);
 
-  // Handle empty block conversion
-  if (text.trim() === "" && (block.type === "todo" || block.type === "list")) {
+  // Clone "before" and "after" contents
+  const beforeRange = range.cloneRange();
+  beforeRange.setStart(active, 0);
+  const beforeContent = beforeRange.cloneContents();
+
+  const afterRange = range.cloneRange();
+  afterRange.setEnd(active, active.childNodes.length);
+  const afterContent = afterRange.cloneContents();
+
+  // Extract HTML from both
+  const tempDiv = document.createElement("div");
+  tempDiv.appendChild(beforeContent);
+  const beforeHTML = tempDiv.innerHTML;
+
+  tempDiv.innerHTML = "";
+  tempDiv.appendChild(afterContent);
+  const afterHTML = tempDiv.innerHTML;
+
+  // Convert current block if empty and was todo/list
+  if (beforeHTML.trim() === "" && (block.type === "todo" || block.type === "list")) {
     blocks[blockIndex] = createBlock("text", "");
     renderBlocks();
     const el = document.querySelector(`[data-id="${blocks[blockIndex].id}"]`);
@@ -1334,22 +1351,21 @@ journalContent.addEventListener("keydown", (e) => {
     return;
   }
 
-  block.content = before;
-
+  block.content = beforeHTML;
   let newType = block.type;
-  if (before.trim() === "" && (block.type === "todo" || block.type === "list")) {
+
+  if (beforeHTML.trim() === "" && (block.type === "todo" || block.type === "list")) {
     newType = "text";
   }
 
-  const nextBlock = createBlock(newType, after);
-  blocks.splice(blockIndex + 1, 0, nextBlock);
+  const createdBlock = createBlock(newType, afterHTML);
+  blocks.splice(blockIndex + 1, 0, createdBlock);
   renderBlocks();
 
-  const newEl = document.querySelector(`[data-id="${nextBlock.id}"]`);
-  if (newEl) {
-    placeCaretAtStart(newEl);
-    // ❗ RemoveFormat ONLY on the selection range, not globally
-    document.execCommand("removeFormat", false, null);
+  const el = document.querySelector(`[data-id="${createdBlock.id}"]`);
+  if (el) {
+    placeCaretAtStart(el);
+    document.execCommand("removeFormat");
   }
 
   saveBlocks();

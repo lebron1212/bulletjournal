@@ -246,7 +246,9 @@ li.line-text {
   box-shadow: none;
 }
 
-
+strong { font-weight: bold; }
+em { font-style: italic; }
+del { text-decoration: line-through; }
 
     .entry-line .line-text {
       flex: 1;
@@ -724,9 +726,21 @@ let commandBuffer = "";
     inner.contentEditable = true;
     inner.innerHTML = block.content;
     inner.oninput = () => {
-      block.content = inner.innerHTML;
-      saveBlocks();
-    };
+  let raw = inner.innerText;
+
+  // Convert markdown to HTML
+  const formatted = raw
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/~~(.*?)~~/g, '<del>$1</del>');
+
+  block.content = formatted;
+  inner.innerHTML = formatted;
+
+  // Move caret to the end again
+  placeCaretAtEnd(inner);
+  saveBlocks();
+};
 
     wrapper.append(cb, inner);
   } else if (block.type === "divider") {
@@ -1412,15 +1426,6 @@ journalContent.addEventListener("keydown", (e) => {
   
   // ✅ Global shortcuts (moved here to fix journalContent reference error)
   document.addEventListener("keydown", (e) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === "b") {
-      document.execCommand("bold");
-      e.preventDefault();
-    } else if ((e.metaKey || e.ctrlKey) && e.key === "i") {
-      document.execCommand("italic");
-      e.preventDefault();
-    } else if ((e.metaKey || e.ctrlKey) && e.key === "u") {
-      document.execCommand("underline");
-      e.preventDefault();
     } else if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
       undo();
       e.preventDefault();

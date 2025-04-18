@@ -1317,7 +1317,7 @@ journalContent.addEventListener("keydown", (e) => {
   const caretOffset = range?.startOffset ?? 0;
 
   // ENTER
-  if (e.key === "Enter" && !e.shiftKey) {
+  = "Enter" && !e.shiftKey) {
   e.preventDefault();
 
   const selection = window.getSelection();
@@ -1372,41 +1372,40 @@ journalContent.addEventListener("keydown", (e) => {
   return;
 }
 
-  // BACKSPACE
   if (e.key === "Backspace" && caretOffset === 0) {
-    e.preventDefault();
+  e.preventDefault();
 
-    const prev = blocks[blockIndex - 1];
-    if (block.content === "") {
-      if (block.type !== "text") {
-        blocks[blockIndex] = createBlock("text", "");
-        renderBlocks();
-        const el = document.querySelector(`[data-id="${blocks[blockIndex].id}"]`);
-        if (el) placeCaretAtStart(el);
-        saveBlocks();
-        return;
-      }
+  const prev = blocks[blockIndex - 1];
+  const current = blocks[blockIndex];
 
-      blocks.splice(blockIndex, 1);
-      renderBlocks();
-      const el = document.querySelector(`[data-id="${prev?.id}"]`);
-      if (el) placeCaretAtEnd(el);
-      saveBlocks();
-      return;
-    }
+  // If current block is empty
+  if (
+    (active.innerText.trim() === "" || active.innerHTML === "<br>") &&
+    blockIndex > 0
+  ) {
+    blocks.splice(blockIndex, 1);
+    renderBlocks();
 
-    // Merge
-    if (prev) {
-      prev.content += block.content;
-      blocks.splice(blockIndex, 1);
-      renderBlocks();
-      const el = document.querySelector(`[data-id="${prev.id}"]`);
-      if (el) placeCaretAtEnd(el);
-      saveBlocks();
-    }
+    const prevEl = document.querySelector(`[data-id="${prev.id}"]`);
+    if (prevEl) placeCaretAtEnd(prevEl);
 
+    saveBlocks();
     return;
   }
+
+  // Handle merging non-empty block into previous
+  if (prev && current.content.trim() !== "") {
+    prev.content += current.content;
+    blocks.splice(blockIndex, 1);
+    renderBlocks();
+
+    const prevEl = document.querySelector(`[data-id="${prev.id}"]`);
+    if (prevEl) placeCaretAtEnd(prevEl);
+
+    saveBlocks();
+    return;
+  }
+}
 
   // COMMAND MODE
   if (e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey) {

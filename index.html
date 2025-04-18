@@ -1302,7 +1302,15 @@ journalContent.addEventListener("keydown", (e) => {
 
     // Otherwise split
     block.content = before;
-    const newBlock = createBlock(block.type, after);
+    let nextType = block.type;
+
+// If the current block is a checkbox or list *but* the content is empty,
+// treat the next block as plain text
+if (block.content.trim() === "" && (block.type === "todo" || block.type === "list")) {
+  nextType = "text";
+}
+
+const newBlock = createBlock(nextType, after);
     blocks.splice(blockIndex + 1, 0, newBlock);
     renderBlocks();
 
@@ -1567,31 +1575,31 @@ function applyCommand(cmd) {
   const parent = window._targetBlock;
   if (!parent) return;
 
+  const blockId = parent.dataset.id;
+  const blockIndex = blocks.findIndex(b => b.id === blockId);
+  if (blockIndex === -1) return;
+
+  let block = blocks[blockIndex];
+
   if (cmd === "/todo") {
-    const newBlock = createLineBlock("checkbox");
-    journalContent.replaceChild(newBlock, parent);
-    placeCaretAtStart(newBlock.querySelector(".line-text"));
-    saveContent();
+    block.type = "todo";
+    block.props = { checked: false };
+    block.content = ""; // Clear content after command
   } else if (cmd === "/divider") {
-    const div = document.createElement("hr");
-    journalContent.insertBefore(div, parent.nextSibling);
-    saveContent();
+    const divider = createBlock("divider", "");
+    blocks.splice(blockIndex + 1, 0, divider);
   } else if (cmd === "/list") {
-  const ul = document.createElement('ul');
-  ul.style.margin = '0 0 14px 20px';
-  ul.style.padding = '0';
-  ul.style.listStyle = 'disc';
+    block.type = "list";
+    block.content = "";
+  }
 
-  const li = document.createElement('li');
-  li.className = 'line-text';
-  li.contentEditable = true;
-  li.textContent = '';
+  renderBlocks();
 
-  ul.appendChild(li);
-  journalContent.replaceChild(ul, parent);
-  placeCaretAtStart(li);
-  saveContent();
-}
+  // Refocus the newly updated block
+  const el = document.querySelector(`[data-id="${block.id}"]`);
+  if (el) placeCaretAtStart(el);
+
+  saveBlocks();
 }
 
   function bindPopupKeys(popupId, onEnter, onEscape) {

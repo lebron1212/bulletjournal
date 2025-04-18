@@ -1318,59 +1318,43 @@ journalContent.addEventListener("keydown", (e) => {
 
   // ENTER
   if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
+  e.preventDefault();
 
-    const selection = window.getSelection();
-const range = selection.getRangeAt(0);
+  const text = active.innerHTML || "";
+  const before = text.slice(0, caretOffset);
+  const after = text.slice(caretOffset);
 
-const cloned = range.cloneRange();
-cloned.setStart(active, 0);
-
-const before = cloned.cloneContents();
-const after = range.cloneContents();
-
-const tempDiv = document.createElement("div");
-tempDiv.appendChild(before);
-block.content = tempDiv.innerHTML;
-
-const newBlock = createBlock(block.type, "");
-tempDiv.innerHTML = ""; // clear for next content
-tempDiv.appendChild(after);
-newBlock.content = tempDiv.innerHTML;
-
-    // If block is empty and is todo or list — convert to plain
-    if (text.trim() === "" && (block.type === "todo" || block.type === "list")) {
-      blocks[blockIndex] = createBlock("text", "");
-      renderBlocks();
-      const el = document.querySelector(`[data-id="${blocks[blockIndex].id}"]`);
-      if (el) placeCaretAtStart(el);
-      saveBlocks();
-      return;
-    }
-
-    // Otherwise, split into two blocks
-    block.content = before;
-    let newType = block.type;
-
-    // If content before is empty in todo/list, use plain text
-    if (before.trim() === "" && (block.type === "todo" || block.type === "list")) {
-      newType = "text";
-    }
-
-    const newBlock = createBlock(newType, after);
-    blocks.splice(blockIndex + 1, 0, newBlock);
+  // Handle empty block conversion
+  if (text.trim() === "" && (block.type === "todo" || block.type === "list")) {
+    blocks[blockIndex] = createBlock("text", "");
     renderBlocks();
-
-    const newEl = document.querySelector(`[data-id="${newBlock.id}"]`);
-    if (newEl) {
-      placeCaretAtStart(newEl);
-      // 🚫 Remove any lingering formatting
-      document.execCommand("removeFormat");
-    }
-
+    const el = document.querySelector(`[data-id="${blocks[blockIndex].id}"]`);
+    if (el) placeCaretAtStart(el);
     saveBlocks();
     return;
   }
+
+  block.content = before;
+
+  let newType = block.type;
+  if (before.trim() === "" && (block.type === "todo" || block.type === "list")) {
+    newType = "text";
+  }
+
+  const nextBlock = createBlock(newType, after);
+  blocks.splice(blockIndex + 1, 0, nextBlock);
+  renderBlocks();
+
+  const newEl = document.querySelector(`[data-id="${nextBlock.id}"]`);
+  if (newEl) {
+    placeCaretAtStart(newEl);
+    // ❗ RemoveFormat ONLY on the selection range, not globally
+    document.execCommand("removeFormat", false, null);
+  }
+
+  saveBlocks();
+  return;
+}
 
   // BACKSPACE
   if (e.key === "Backspace" && caretOffset === 0) {

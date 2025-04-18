@@ -1701,7 +1701,7 @@ function applyCommand(cmd) {
   renderBlocks();
 
   // Refocus the newly updated block
-  const el = document.querySelector([data-id="${block.id}"]);
+const el = document.querySelector(`[data-id="${block.id}"]`);
   if (el) placeCaretAtStart(el);
 
   saveBlocks();

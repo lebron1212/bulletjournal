@@ -608,9 +608,14 @@ function createBlock(type = "text", content = "", props = {}) {
 
 
 function getTodaySlug(offset = 0) {
-  const d = new Date();
-  d.setDate(d.getDate() + offset);
-  return d.toISOString().slice(0, 10);
+  const now = new Date();
+
+  // Adjust for local time zone offset in minutes
+  const localOffset = now.getTimezoneOffset(); // in minutes
+  const adjusted = new Date(now.getTime() - localOffset * 60000);
+
+  adjusted.setDate(adjusted.getDate() + offset);
+  return adjusted.toISOString().slice(0, 10);
 }
 
 function encodeHTML(str) {
@@ -793,35 +798,54 @@ function loadContent(mode, slug, label, url) {
   highlightActive(slug);
 
   const content = document.getElementById("journal-content");
-  const cached = localStorage.getItem(`bujocache-${mode}-${slug}`);
-  const cachedHtml = cached ? decodeHTML(cached) : "";
-  const cachedVer = extractVersion(cachedHtml);
-  try {
-  const parsed = JSON.parse(decodeHTML(cached));
-  blocks = parsed;
-  blockIdCounter = blocks.length;
-  renderBlocks();
-  updateStatus("LOADED CACHED");
-} catch (e) {
-  blocks = [createBlock("text", "")];
-  renderBlocks();
-  updateStatus("EMPTY");
-}
-  updateStatus(cached ? "LOADED CACHED" : "EMPTY");
+  const blockKey = `blocks-${mode}-${slug}`;
+  const htmlKey = `bujocache-${mode}-${slug}`;
+  const blockCache = localStorage.getItem(blockKey);
+  const htmlCache = localStorage.getItem(htmlKey);
 
+  try {
+    if (blockCache) {
+      blocks = JSON.parse(blockCache);
+      blockIdCounter = blocks.length;
+      renderBlocks();
+      updateStatus("LOADED LOCAL BLOCKS");
+    } else if (htmlCache) {
+      const html = decodeHTML(htmlCache);
+      blocks = parseHTMLToBlocks(html);
+      blockIdCounter = blocks.length;
+      renderBlocks();
+      localStorage.setItem(blockKey, JSON.stringify(blocks)); // Save parsed blocks
+      updateStatus("LOADED PARSED HTML");
+    } else {
+      blocks = [createBlock("text", "")];
+      renderBlocks();
+      updateStatus("EMPTY");
+    }
+  } catch (e) {
+    console.error("Failed to load from cache", e);
+    blocks = [createBlock("text", "")];
+    renderBlocks();
+    updateStatus("ERROR");
+  }
+
+  // Sync with GitHub (remote)
   fetch(url).then(res => res.ok ? res.text() : null).then(remote => {
     if (!remote) return;
     const remoteVer = extractVersion(remote);
-    if (remoteVer > cachedVer) {
+    const localVer = extractVersion(htmlCache ? decodeHTML(htmlCache) : "");
+
+    if (remoteVer > localVer) {
       blocks = parseHTMLToBlocks(remote);
-blockIdCounter = blocks.length;
-renderBlocks();
-      localStorage.setItem(`bujocache-${mode}-${slug}`, encodeHTML(remote));
+      blockIdCounter = blocks.length;
+      renderBlocks();
+      localStorage.setItem(htmlKey, encodeHTML(remote));
+      localStorage.setItem(blockKey, JSON.stringify(blocks)); // Save updated blocks
       updateStatus("LOADED SYNCED");
+
       setTimeout(() => {
-  const editable = document.querySelector('#journal-content .line-text');
-  if (editable) placeCaretAtEnd(editable);
-}, 150);
+        const editable = document.querySelector('#journal-content .line-text');
+        if (editable) placeCaretAtEnd(editable);
+      }, 150);
     }
   }).catch(() => updateStatus("OFFLINE"));
 }

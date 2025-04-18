@@ -592,26 +592,45 @@ let commandBuffer = "";
 
   function normalizeJournalContent() {
   const content = document.getElementById("journal-content");
+  const lines = Array.from(content.childNodes);
+  content.innerHTML = ''; // clear current content
 
-  Array.from(content.childNodes).forEach(child => {
-    // If it's a text node or random div/span not wrapped properly
-    if (
-      child.nodeType === Node.TEXT_NODE ||
-      (child.nodeType === Node.ELEMENT_NODE &&
-        !child.classList.contains("entry-line") &&
-        !child.classList.contains("line-text"))
-    ) {
-      const text = child.textContent.trim();
-      if (text.length === 0) {
-        content.removeChild(child); // empty junk
-        return;
+  let ul = null;
+
+  lines.forEach(node => {
+    let text = '';
+    if (node.nodeType === Node.TEXT_NODE) {
+      text = node.textContent.trim();
+    } else if (node.nodeType === Node.ELEMENT_NODE && node.textContent) {
+      text = node.textContent.trim();
+    }
+
+    // Handle list item
+    if (text.startsWith('- ')) {
+      if (!ul) {
+        ul = document.createElement('ul');
+        ul.style.margin = '0 0 14px 20px';
+        ul.style.padding = '0';
+        ul.style.listStyle = 'disc';
+        content.appendChild(ul);
       }
 
-      const block = document.createElement("div");
-      block.className = "line-text";
-      block.contentEditable = true;
-      block.textContent = text;
-      content.replaceChild(block, child);
+      const li = document.createElement('li');
+      li.textContent = text.slice(2);
+      li.className = 'line-text';
+      li.contentEditable = true;
+      ul.appendChild(li);
+    } else {
+      ul = null;
+
+      // Wrap text as editable block if needed
+      if (text.length > 0) {
+        const block = document.createElement('div');
+        block.className = 'line-text';
+        block.contentEditable = true;
+        block.textContent = text;
+        content.appendChild(block);
+      }
     }
   });
 }

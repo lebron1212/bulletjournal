@@ -442,6 +442,30 @@ li.line-text {
     color: #000;
   }
 }
+    li.line-text {
+  list-style: disc;
+  margin-left: 20px;
+  color: #eee;
+  font-size: 0.75rem;
+  position: relative;
+  text-transform: none;
+}
+
+/* The actual editable area inside the bullet */
+li.line-text > .line-text-inner {
+  display: inline-block;
+  width: 100%;
+  color: inherit;
+  outline: none;
+  background: transparent;
+}
+
+/* Light mode support */
+@media (prefers-color-scheme: light) {
+  li.line-text {
+    color: #000;
+  }
+}
 
 .command-option.active {
   background: #444;
@@ -645,10 +669,16 @@ let commandBuffer = "";
       }
 
       const li = document.createElement('li');
-      li.textContent = text.slice(2);
-      li.className = 'line-text';
-      li.contentEditable = true;
-      ul.appendChild(li);
+li.className = 'line-text';
+
+// Make a child div contenteditable instead of the <li>
+const editable = document.createElement('div');
+editable.contentEditable = true;
+editable.className = 'line-text-inner';
+editable.textContent = text.slice(2);
+
+li.appendChild(editable);
+ul.appendChild(li);
     } else {
       ul = null;
 

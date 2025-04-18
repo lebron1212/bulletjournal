@@ -608,7 +608,7 @@ let blockIdCounter = 0;
 
 function createBlock(type = "text", content = "", props = {}) {
   return {
-    id: `block-${blockIdCounter++}`,
+    id: block-${blockIdCounter++},
     type,
     content,
     props
@@ -758,7 +758,7 @@ let commandBuffer = "";
 }
   
 function saveBlocks() {
-  localStorage.setItem(`blocks-${currentMode}-${currentSlug}`, JSON.stringify(blocks));
+  localStorage.setItem(blocks-${currentMode}-${currentSlug}, JSON.stringify(blocks));
   debounceSync(); // optional, if you're syncing
 }
 
@@ -801,8 +801,8 @@ function loadContent(mode, slug, label, url) {
   highlightActive(slug);
 
   const content = document.getElementById("journal-content");
-  const blockKey = `blocks-${mode}-${slug}`;
-  const htmlKey = `bujocache-${mode}-${slug}`;
+  const blockKey = blocks-${mode}-${slug};
+  const htmlKey = bujocache-${mode}-${slug};
   const blockCache = localStorage.getItem(blockKey);
   const htmlCache = localStorage.getItem(htmlKey);
 
@@ -868,22 +868,22 @@ function forceCheckboxAttrs() {
   for (const block of blocks) {
     if (block.type === "todo") {
       const checked = block.props?.checked ? ' checked="checked"' : '';
-      html += `<div class="entry-line"><input type="checkbox"${checked}><div class="line-text" contenteditable="true">${block.content}</div></div>\n`;
+      html += <div class="entry-line"><input type="checkbox"${checked}><div class="line-text" contenteditable="true">${block.content}</div></div>\n;
     } else if (block.type === "divider") {
-      html += `<hr>\n`;
+      html += <hr>\n;
     } else if (block.type === "list") {
-      listBuffer.push(`<li class="line-text">${block.content}</li>`);
+      listBuffer.push(<li class="line-text">${block.content}</li>);
     } else {
       if (listBuffer.length) {
-        html += `<ul>\n${listBuffer.join("\n")}\n</ul>\n`;
+        html += <ul>\n${listBuffer.join("\n")}\n</ul>\n;
         listBuffer = [];
       }
-      html += `<div class="line-text" contenteditable="true">${block.content}</div>\n`;
+      html += <div class="line-text" contenteditable="true">${block.content}</div>\n;
     }
   }
 
   if (listBuffer.length) {
-    html += `<ul>\n${listBuffer.join("\n")}\n</ul>\n`;
+    html += <ul>\n${listBuffer.join("\n")}\n</ul>\n;
   }
 
   return html;
@@ -916,7 +916,7 @@ function forceCheckboxAttrs() {
       continue;
     }
 
-    // ✅ List item (`<ul><li class="line-text">...</li></ul>`)
+    // ✅ List item (<ul><li class="line-text">...</li></ul>)
     if (node.tagName === "UL") {
   const items = node.querySelectorAll("li.line-text");
   items.forEach(li => {
@@ -932,13 +932,13 @@ function forceCheckboxAttrs() {
 
 function saveLocal() {
   const content = document.getElementById("journal-content");
-  const html = `<!-- version:${new Date().toISOString()} -->\n${serializeBlocksToHTML()}`;
-  localStorage.setItem(`bujocache-${currentMode}-${currentSlug}`, encodeHTML(html));
+  const html = <!-- version:${new Date().toISOString()} -->\n${serializeBlocksToHTML()};
+  localStorage.setItem(bujocache-${currentMode}-${currentSlug}, encodeHTML(html));
 }
 
 function syncRemote() {
   const content = document.getElementById("journal-content");
-  const html = `<!-- version:${new Date().toISOString()} -->\n${serializeBlocksToHTML()}`;
+  const html = <!-- version:${new Date().toISOString()} -->\n${serializeBlocksToHTML()};
   updateStatus("SYNCING...", true);
   fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
     method: "POST",
@@ -997,7 +997,7 @@ function renderRecents() {
     div.className = "item";
     div.dataset.entry = slug;
     div.textContent = slug;
-    div.onclick = () => loadContent("daily", slug, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${slug}.html`);
+    div.onclick = () => loadContent("daily", slug, "DAILY LOG", https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${slug}.html);
     box.appendChild(div);
   });
 }
@@ -1030,7 +1030,7 @@ function renderCalendar() {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const dots = getDotDaysForMonth(year, month);
   calendarGrid.innerHTML = "";
-  calendarMonthLabel.textContent = `${calendarDate.toLocaleString('default', { month: 'long' })} ${year}`;
+  calendarMonthLabel.textContent = ${calendarDate.toLocaleString('default', { month: 'long' })} ${year};
   for (let i = 0; i < firstDay; i++) calendarGrid.appendChild(document.createElement("div"));
   for (let d = 1; d <= daysInMonth; d++) {
     const day = document.createElement("div");
@@ -1041,11 +1041,11 @@ function renderCalendar() {
     day.style.cursor = "pointer";
     if (dots.has(d)) day.classList.add("calendar-dot");
     if (d === today.getDate() && year === today.getFullYear() && month === today.getMonth()) day.classList.add("calendar-today");
-    if (selectedCalendarDate && selectedCalendarDate === `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`) {
+    if (selectedCalendarDate && selectedCalendarDate === ${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}) {
       day.classList.add("calendar-selected");
     }
     day.onclick = () => {
-      selectedCalendarDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      selectedCalendarDate = ${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")};
       calendarCreateBtn.disabled = false;
       renderCalendar();
     };
@@ -1072,7 +1072,7 @@ calendarCreateBtn.onclick = () => {
   if (!selectedCalendarDate) return;
   calendarPopup.style.display = "none";
 
-  loadContent("daily", selectedCalendarDate, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${selectedCalendarDate}.html`);
+  loadContent("daily", selectedCalendarDate, "DAILY LOG", https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${selectedCalendarDate}.html);
 
   setTimeout(() => {
     const editable = document.querySelector('#journal-content .line-text');
@@ -1099,7 +1099,7 @@ function createCollection() {
   const name = input.value.trim().toUpperCase().replace(/\s+/g, "-");
   if (!name) return;
 
-  const html = `<!-- version:${new Date().toISOString()} -->\n<div class="line-text" contenteditable="true">New collection: ${name}</div>`;
+  const html = <!-- version:${new Date().toISOString()} -->\n<div class="line-text" contenteditable="true">New collection: ${name}</div>;
 
   fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
     method: "POST",
@@ -1117,9 +1117,9 @@ function createCollection() {
     const updated = Array.from(new Set([name, ...existing]));
 
     localStorage.setItem(localKey, JSON.stringify(updated));
-    localStorage.setItem(`${localKey}-version`, now); // 🔥 store version timestamp
+    localStorage.setItem(${localKey}-version, now); // 🔥 store version timestamp
     renderCollections(updated);
-    loadContent("collection", name, name, `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/collections/collection-${name}.html`);
+    loadContent("collection", name, name, https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/collections/collection-${name}.html);
 
 setTimeout(() => {
   const editable = document.querySelector('#journal-content .line-text');
@@ -1162,7 +1162,7 @@ function confirmDelete() {
     }
 
     // Remove local cache
-    const localKey = `bujocache-collection-${window._deleteTarget}`;
+    const localKey = bujocache-collection-${window._deleteTarget};
     localStorage.removeItem(localKey);
 
     const updated = JSON.parse(localStorage.getItem("collections-list") || "[]")
@@ -1237,7 +1237,7 @@ function renderCollections(slugs) {
     div.appendChild(ctrl);
 
     div.onclick = () => {
-      loadContent("collection", slug, slug, `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/collections/collection-${slug}.html`);
+      loadContent("collection", slug, slug, https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/collections/collection-${slug}.html);
     };
 
     box.appendChild(div);
@@ -1303,7 +1303,7 @@ bindPopupKeys('delete-popup', confirmDelete, hideDeletePopup);
     bindPopupKeys('calendar-popup', () => {
     if (!selectedCalendarDate) return;
     calendarPopup.style.display = "none";
-    loadContent("daily", selectedCalendarDate, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${selectedCalendarDate}.html`);
+    loadContent("daily", selectedCalendarDate, "DAILY LOG", https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${selectedCalendarDate}.html);
     setTimeout(() => {
       const editable = document.querySelector('#journal-content .line-text');
       if (editable) placeCaretAtEnd(editable);
@@ -1330,94 +1330,101 @@ journalContent.addEventListener("keydown", (e) => {
 
   // ENTER
   if (e.key === "Enter" && !e.shiftKey) {
-  e.preventDefault();
+    e.preventDefault();
 
-  const selection = window.getSelection();
-  const range = selection.getRangeAt(0);
+    const selection = window.getSelection();
+    const range = selection.getRangeAt(0);
 
-  // Clone "before" and "after" contents
-  const beforeRange = range.cloneRange();
-  beforeRange.setStart(active, 0);
-  const beforeContent = beforeRange.cloneContents();
+    const beforeRange = range.cloneRange();
+    beforeRange.setStart(active, 0);
+    const beforeContent = beforeRange.cloneContents();
 
-  const afterRange = range.cloneRange();
-  afterRange.setEnd(active, active.childNodes.length);
-  const afterContent = afterRange.cloneContents();
+    const afterRange = range.cloneRange();
+    afterRange.setEnd(active, active.childNodes.length);
+    const afterContent = afterRange.cloneContents();
 
-  // Extract HTML from both
-  const tempDiv = document.createElement("div");
-  tempDiv.appendChild(beforeContent);
-  const beforeHTML = tempDiv.innerHTML;
+    const tempDiv = document.createElement("div");
+    tempDiv.appendChild(beforeContent);
+    const beforeHTML = tempDiv.innerHTML;
 
-  tempDiv.innerHTML = "";
-  tempDiv.appendChild(afterContent);
-  const afterHTML = tempDiv.innerHTML;
+    tempDiv.innerHTML = "";
+    tempDiv.appendChild(afterContent);
+    const afterHTML = tempDiv.innerHTML;
 
-  // Convert current block if empty and was todo/list
-  if (beforeHTML.trim() === "" && (block.type === "todo" || block.type === "list")) {
-    blocks[blockIndex] = createBlock("text", "");
+    block.content = beforeHTML;
+
+    let newType = block.type;
+    if (block.type === "list") newType = "list";
+    else if (block.type === "todo") newType = "todo";
+    else newType = "text";
+
+    const createdBlock = createBlock(newType, afterHTML);
+    blocks.splice(blockIndex + 1, 0, createdBlock);
     renderBlocks();
-    const el = document.querySelector(`[data-id="${blocks[blockIndex].id}"]`);
-    if (el) placeCaretAtStart(el);
+
+    const el = document.querySelector(`[data-id="${createdBlock.id}"]`);
+    if (el) {
+      placeCaretAtStart(el);
+      document.execCommand("removeFormat");
+    }
+
     saveBlocks();
     return;
   }
 
-  block.content = beforeHTML;
-  let newType = block.type;
-
-  if (beforeHTML.trim() === "" && (block.type === "todo" || block.type === "list")) {
-    newType = "text";
-  }
-
-  const createdBlock = createBlock(newType, afterHTML);
-  blocks.splice(blockIndex + 1, 0, createdBlock);
-  renderBlocks();
-
-  const el = document.querySelector(`[data-id="${createdBlock.id}"]`);
-  if (el) {
-    placeCaretAtStart(el);
-    document.execCommand("removeFormat");
-  }
-
-  saveBlocks();
-  return;
-}
-
+  // BACKSPACE
   if (e.key === "Backspace" && caretOffset === 0) {
-  e.preventDefault();
+    e.preventDefault();
 
-  const prev = blocks[blockIndex - 1];
-  const current = blocks[blockIndex];
+    const prev = blocks[blockIndex - 1];
+    const current = blocks[blockIndex];
+    const contentEmpty = (active.innerText.trim() === "" || active.innerHTML === "<br>");
 
-  // If current block is empty
-  if (
-    (active.innerText.trim() === "" || active.innerHTML === "<br>") &&
-    blockIndex > 0
-  ) {
-    blocks.splice(blockIndex, 1);
-    renderBlocks();
+    // ✅ Remove empty list or todo
+    if ((block.type === "todo" || block.type === "list") && contentEmpty) {
+      blocks.splice(blockIndex, 1);
+      renderBlocks();
+      if (prev) placeCaretAtEnd(document.querySelector(`[data-id="${prev.id}"]`));
+      saveBlocks();
+      return;
+    }
 
-    const prevEl = document.querySelector(`[data-id="${prev.id}"]`);
-    if (prevEl) placeCaretAtEnd(prevEl);
+    // ✅ Remove empty text block
+    if (contentEmpty && blockIndex > 0) {
+      blocks.splice(blockIndex, 1);
+      renderBlocks();
+      if (prev) placeCaretAtEnd(document.querySelector(`[data-id="${prev.id}"]`));
+      saveBlocks();
+      return;
+    }
 
-    saveBlocks();
+    // ✅ Merge non-empty with previous
+    if (prev && current.content.trim() !== "") {
+      prev.content += current.content;
+      blocks.splice(blockIndex, 1);
+      renderBlocks();
+      if (prev) placeCaretAtEnd(document.querySelector(`[data-id="${prev.id}"]`));
+      saveBlocks();
+      return;
+    }
+  }
+
+  // COMMAND MODE
+  if (e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    isCommandMode = true;
+    commandBuffer = "/";
+    window._targetBlock = parent;
+    openCommandPalette();
     return;
   }
 
-  // Handle merging non-empty block into previous
-  if (prev && current.content.trim() !== "") {
-    prev.content += current.content;
-    blocks.splice(blockIndex, 1);
-    renderBlocks();
-
-    const prevEl = document.querySelector(`[data-id="${prev.id}"]`);
-    if (prevEl) placeCaretAtEnd(prevEl);
-
-    saveBlocks();
+  if (e.key === "Escape" && isCommandMode) {
+    isCommandMode = false;
+    commandBuffer = "";
+    closeCommandPalette();
     return;
   }
-}
+});
 
   // COMMAND MODE
   if (e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey) {
@@ -1470,13 +1477,13 @@ journalContent.addEventListener("keydown", (e) => {
   const tomo = getTodaySlug(1);
 
   document.querySelector('[data-entry="today"]').onclick = () =>
-    loadContent("daily", today, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${today}.html`);
+    loadContent("daily", today, "DAILY LOG", https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${today}.html);
   document.querySelector('[data-entry="yesterday"]').onclick = () =>
-    loadContent("daily", yest, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${yest}.html`);
+    loadContent("daily", yest, "DAILY LOG", https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${yest}.html);
   document.querySelector('[data-entry="tomorrow"]').onclick = () =>
-    loadContent("daily", tomo, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${tomo}.html`);
+    loadContent("daily", tomo, "DAILY LOG", https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${tomo}.html);
 
-  loadContent("daily", today, "DAILY LOG", `https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${today}.html`);
+  loadContent("daily", today, "DAILY LOG", https://raw.githubusercontent.com/lebron1212/bulletjournal/main/journals/indexes/journal-${today}.html);
 document.getElementById("journal-content").addEventListener("click", e => {
   const content = document.getElementById("journal-content");
   const target = e.target;
@@ -1505,7 +1512,7 @@ document.getElementById("journal-content").addEventListener("click", e => {
   const newBlock = createBlock("text", "");
   blocks.push(newBlock);
   renderBlocks();
-  const el = document.querySelector(`[data-id=\"${newBlock.id}\"]`);
+  const el = document.querySelector([data-id=\"${newBlock.id}\"]);
   if (el) placeCaretAtStart(el);
   saveBlocks();
 }
@@ -1560,8 +1567,8 @@ if (top + paletteHeight > window.innerHeight) {
   top = rect.top + window.scrollY - paletteHeight - 10; // flip above
 }
 
-palette.style.left = `${left}px`;
-palette.style.top = `${top}px`;
+palette.style.left = ${left}px;
+palette.style.top = ${top}px;
   paletteActive = true;
   commandSearch.value = "";
   renderCommandOptions(COMMANDS);
@@ -1641,7 +1648,7 @@ function applyCommand(cmd) {
   renderBlocks();
 
   // Refocus the newly updated block
-  const el = document.querySelector(`[data-id="${block.id}"]`);
+  const el = document.querySelector([data-id="${block.id}"]);
   if (el) placeCaretAtStart(el);
 
   saveBlocks();

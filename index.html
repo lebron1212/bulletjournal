@@ -1194,43 +1194,65 @@ journalContent.addEventListener("keydown", (e) => {
 
   const prevEditable = prev?.querySelector("[contenteditable]") || prev;
 
-  // 🔁 Convert empty checkbox to plain text
+  // 🔁 Convert empty checkbox to plain text (iframe-proof)
   if (activeText === "" && isCheckboxBlock) {
     e.preventDefault();
 
     const plain = createLineBlock("text", "");
     journalContent.replaceChild(plain, parent);
-    placeCaretAtStart(plain);
+
+    const editable = plain.querySelector("[contenteditable]") || plain;
+
+    // ⛑ In iframe/Notion sandbox, delay is critical
+    setTimeout(() => {
+      editable.focus();
+      placeCaretAtStart(editable);
+    }, 10);
+
     saveContent();
     return;
   }
 
-  // 🧹 Convert any other empty wrapped element to plain
+  // 🧹 Convert wrapped empty element
   if (activeText === "" && parent !== active && parent !== active.parentElement) {
     e.preventDefault();
 
     const plain = createLineBlock("text", "");
     journalContent.replaceChild(plain, parent);
-    placeCaretAtStart(plain);
+
+    const editable = plain.querySelector("[contenteditable]") || plain;
+    setTimeout(() => {
+      editable.focus();
+      placeCaretAtStart(editable);
+    }, 10);
+
     saveContent();
     return;
   }
 
-  // 🗑 Remove empty plain block
+  // 🗑 Remove plain empty line
   if (activeText === "" && parent === active) {
     e.preventDefault();
     parent.remove();
-    if (prevEditable) placeCaretAtEnd(prevEditable);
+    if (prevEditable) {
+      setTimeout(() => {
+        prevEditable.focus();
+        placeCaretAtEnd(prevEditable);
+      }, 10);
+    }
     saveContent();
     return;
   }
 
-  // ➕ Merge into previous
+  // ➕ Merge into previous line
   if (activeText.length > 0 && prevEditable) {
     e.preventDefault();
     parent.remove();
-    placeCaretAtEnd(prevEditable);
-    document.execCommand("insertText", false, active.textContent);
+    setTimeout(() => {
+      prevEditable.focus();
+      placeCaretAtEnd(prevEditable);
+      document.execCommand("insertText", false, active.textContent);
+    }, 10);
     saveContent();
     return;
   }

@@ -1112,7 +1112,7 @@ calendarMonthLabel.textContent = `${calendarDate.toLocaleString('default', { mon
     day.style.cursor = "pointer";
     if (dots.has(d)) day.classList.add("calendar-dot");
     if (d === today.getDate() && year === today.getFullYear() && month === today.getMonth()) day.classList.add("calendar-today");
-    if (selectedCalendarDate && selectedCalendarDate === ${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}) {
+if (selectedCalendarDate && selectedCalendarDate === `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`) {
       day.classList.add("calendar-selected");
     }
     day.onclick = () => {

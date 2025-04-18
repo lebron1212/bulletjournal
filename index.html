@@ -506,6 +506,72 @@ li.line-text > .line-text-inner {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+    /* Mobile Enhancements */
+@media (max-width: 500px) {
+  #wrapper {
+    flex-direction: column;
+    padding: 16px 12px;
+    gap: 16px;
+  }
+
+  .panel {
+    width: 100%;
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  .card {
+    padding: 14px;
+    margin-bottom: 16px;
+    border-radius: 10px;
+  }
+
+  #journal-panel {
+    min-height: auto;
+    padding-bottom: 80px; /* breathing room */
+  }
+
+  .entry-line input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+  }
+
+  .line-text,
+  .entry-line .line-text {
+    font-size: 0.8rem !important;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  #entry-title {
+    font-size: 1rem;
+  }
+
+  #entry-date {
+    font-size: 0.75rem;
+  }
+
+  .item-controls button {
+    font-size: 1rem;
+    padding: 4px;
+  }
+
+  .popup {
+    width: 90vw;
+    padding: 16px;
+  }
+
+  #calendar-btn {
+    left: auto;
+    right: 10px;
+    top: 10px;
+  }
+}
   </style>
 </head>
 <body>

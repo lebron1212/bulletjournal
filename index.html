@@ -1461,7 +1461,7 @@ document.getElementById("journal-content").addEventListener("click", e => {
   }
 
   if (target === content && target === content.lastElementChild) {
-  const newBlock = createBlock(\"text\", \"\");
+  const newBlock = createBlock("text", "");
   blocks.push(newBlock);
   renderBlocks();
   const el = document.querySelector(`[data-id=\"${newBlock.id}\"]`);

@@ -1003,13 +1003,13 @@ function forceCheckboxAttrs() {
 
 function saveLocal() {
   const content = document.getElementById("journal-content");
-  const html = <!-- version:${new Date().toISOString()} -->\n${serializeBlocksToHTML()};
-  localStorage.setItem(bujocache-${currentMode}-${currentSlug}, encodeHTML(html));
+  const html = `<!-- version:${new Date().toISOString()} -->\n${serializeBlocksToHTML()}`;
+localStorage.setItem(`bujocache-${currentMode}-${currentSlug}`, encodeHTML(html));
 }
 
 function syncRemote() {
   const content = document.getElementById("journal-content");
-  const html = <!-- version:${new Date().toISOString()} -->\n${serializeBlocksToHTML()};
+  const html = `<!-- version:${new Date().toISOString()} -->\n${serializeBlocksToHTML()}`;
   updateStatus("SYNCING...", true);
   fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
     method: "POST",
@@ -1170,7 +1170,7 @@ function createCollection() {
   const name = input.value.trim().toUpperCase().replace(/\s+/g, "-");
   if (!name) return;
 
-  const html = <!-- version:${new Date().toISOString()} -->\n<div class="line-text" contenteditable="true">New collection: ${name}</div>;
+const html = `<!-- version:${new Date().toISOString()} -->\n<div class="line-text" contenteditable="true">New collection: ${name}</div>`;
 
   fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
     method: "POST",

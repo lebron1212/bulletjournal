@@ -1320,9 +1320,23 @@ journalContent.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
 
-    const text = active.innerText || "";
-    const before = text.slice(0, caretOffset);
-    const after = text.slice(caretOffset);
+    const selection = window.getSelection();
+const range = selection.getRangeAt(0);
+
+const cloned = range.cloneRange();
+cloned.setStart(active, 0);
+
+const before = cloned.cloneContents();
+const after = range.cloneContents();
+
+const tempDiv = document.createElement("div");
+tempDiv.appendChild(before);
+block.content = tempDiv.innerHTML;
+
+const newBlock = createBlock(block.type, "");
+tempDiv.innerHTML = ""; // clear for next content
+tempDiv.appendChild(after);
+newBlock.content = tempDiv.innerHTML;
 
     // If block is empty and is todo or list — convert to plain
     if (text.trim() === "" && (block.type === "todo" || block.type === "list")) {

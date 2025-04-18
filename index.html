@@ -1311,17 +1311,18 @@ journalContent.addEventListener("keydown", (e) => {
 
   const block = blocks[blockIndex];
   const sel = window.getSelection();
-  const caretOffset = sel?.getRangeAt(0)?.startOffset ?? 0;
+  const range = sel?.getRangeAt(0);
+  const caretOffset = range?.startOffset ?? 0;
 
-  // ENTER = split or insert block
-  if (e.key === "Enter") {
+  // ENTER
+  if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
 
-    const text = active.innerHTML;
+    const text = active.innerText || "";
     const before = text.slice(0, caretOffset);
     const after = text.slice(caretOffset);
 
-    // If it's a todo or list and empty, convert to plain
+    // If block is empty and is todo or list — convert to plain
     if (text.trim() === "" && (block.type === "todo" || block.type === "list")) {
       blocks[blockIndex] = createBlock("text", "");
       renderBlocks();
@@ -1331,34 +1332,37 @@ journalContent.addEventListener("keydown", (e) => {
       return;
     }
 
-    // Otherwise split
+    // Otherwise, split into two blocks
     block.content = before;
-    let nextType = block.type;
+    let newType = block.type;
 
-// If the current block is a checkbox or list *but* the content is empty,
-// treat the next block as plain text
-if (block.content.trim() === "" && (block.type === "todo" || block.type === "list")) {
-  nextType = "text";
-}
+    // If content before is empty in todo/list, use plain text
+    if (before.trim() === "" && (block.type === "todo" || block.type === "list")) {
+      newType = "text";
+    }
 
-const newBlock = createBlock(nextType, after);
+    const newBlock = createBlock(newType, after);
     blocks.splice(blockIndex + 1, 0, newBlock);
     renderBlocks();
 
     const newEl = document.querySelector(`[data-id="${newBlock.id}"]`);
-    if (newEl) placeCaretAtStart(newEl);
+    if (newEl) {
+      placeCaretAtStart(newEl);
+      // 🚫 Remove any lingering formatting
+      document.execCommand("removeFormat");
+    }
+
     saveBlocks();
     return;
   }
 
-  // BACKSPACE = delete or convert
+  // BACKSPACE
   if (e.key === "Backspace" && caretOffset === 0) {
     e.preventDefault();
 
     const prev = blocks[blockIndex - 1];
     if (block.content === "") {
-      // Convert todo/list to plain if empty
-      if (block.type === "todo" || block.type === "list") {
+      if (block.type !== "text") {
         blocks[blockIndex] = createBlock("text", "");
         renderBlocks();
         const el = document.querySelector(`[data-id="${blocks[blockIndex].id}"]`);
@@ -1367,7 +1371,6 @@ const newBlock = createBlock(nextType, after);
         return;
       }
 
-      // If just a plain empty text block, remove it
       blocks.splice(blockIndex, 1);
       renderBlocks();
       const el = document.querySelector(`[data-id="${prev?.id}"]`);
@@ -1376,16 +1379,13 @@ const newBlock = createBlock(nextType, after);
       return;
     }
 
-    // Merge with previous
+    // Merge
     if (prev) {
-      const prevContent = prev.content;
       prev.content += block.content;
       blocks.splice(blockIndex, 1);
       renderBlocks();
       const el = document.querySelector(`[data-id="${prev.id}"]`);
-      if (el) {
-        placeCaretAtEnd(el);
-      }
+      if (el) placeCaretAtEnd(el);
       saveBlocks();
     }
 
@@ -1401,7 +1401,6 @@ const newBlock = createBlock(nextType, after);
     return;
   }
 
-  // ESC exits command
   if (e.key === "Escape" && isCommandMode) {
     isCommandMode = false;
     commandBuffer = "";

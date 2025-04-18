@@ -587,6 +587,19 @@ let currentSlug = "";
 let recentEntries = [];
 let selectedCalendarDate = null;
 
+  let blocks = []; // Global state: our array of blocks
+let blockIdCounter = 0;
+
+function createBlock(type = "text", content = "", props = {}) {
+  return {
+    id: `block-${blockIdCounter++}`,
+    type,
+    content,
+    props
+  };
+}
+
+
 function getTodaySlug(offset = 0) {
   const d = new Date();
   d.setDate(d.getDate() + offset);
@@ -641,55 +654,97 @@ function formatPrettyDate(dateStr) {
   let isCommandMode = false;
 let commandBuffer = "";
 
-  function normalizeJournalContent() {
-  const content = document.getElementById("journal-content");
-  const lines = Array.from(content.childNodes);
-  content.innerHTML = ''; // clear current content
+  function renderBlocks() {
+  const contentEl = document.getElementById("journal-content");
+  contentEl.innerHTML = "";
 
-  let ul = null;
+  let listBuffer = [];
 
-  lines.forEach(node => {
-    let text = '';
-    if (node.nodeType === Node.TEXT_NODE) {
-      text = node.textContent.trim();
-    } else if (node.nodeType === Node.ELEMENT_NODE && node.textContent) {
-      text = node.textContent.trim();
+  for (const block of blocks) {
+    if (block.type === "list") {
+      listBuffer.push(block);
+      continue;
     }
 
-    // Handle list item
-    if (text.startsWith('- ')) {
-      if (!ul) {
-        ul = document.createElement('ul');
-        ul.style.margin = '0 0 14px 20px';
-        ul.style.padding = '0';
-        ul.style.listStyle = 'disc';
-        content.appendChild(ul);
-      }
-
-      const li = document.createElement('li');
-li.className = 'line-text';
-
-// Make a child div contenteditable instead of the <li>
-const editable = document.createElement('div');
-editable.contentEditable = true;
-editable.className = 'line-text-inner';
-editable.textContent = text.slice(2);
-
-li.appendChild(editable);
-ul.appendChild(li);
-    } else {
-      ul = null;
-
-      // Wrap text as editable block if needed
-      if (text.length > 0) {
-        const block = document.createElement('div');
-        block.className = 'line-text';
-        block.contentEditable = true;
-        block.textContent = text;
-        content.appendChild(block);
-      }
+    if (listBuffer.length) {
+      const ul = document.createElement("ul");
+      listBuffer.forEach(item => {
+        ul.appendChild(renderBlock(item));
+      });
+      contentEl.appendChild(ul);
+      listBuffer = [];
     }
-  });
+
+    contentEl.appendChild(renderBlock(block));
+  }
+
+  // If it ends with a list
+  if (listBuffer.length) {
+    const ul = document.createElement("ul");
+    listBuffer.forEach(item => {
+      ul.appendChild(renderBlock(item));
+    });
+    contentEl.appendChild(ul);
+  }
+}
+
+  function renderBlock(block) {
+  const wrapper = document.createElement("div");
+  wrapper.dataset.id = block.id;
+  wrapper.dataset.type = block.type;
+  wrapper.className = "block";
+
+  let inner;
+
+  if (block.type === "todo") {
+    wrapper.classList.add("entry-line");
+
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = block.props.checked || false;
+    cb.onchange = () => {
+      block.props.checked = cb.checked;
+      saveBlocks();
+    };
+
+    inner = document.createElement("div");
+    inner.className = "line-text";
+    inner.contentEditable = true;
+    inner.innerText = block.content;
+    inner.oninput = () => {
+      block.content = inner.innerText;
+      saveBlocks();
+    };
+
+    wrapper.append(cb, inner);
+  } else if (block.type === "divider") {
+    return document.createElement("hr");
+    } else if (block.type === "list") {
+  const li = document.createElement("li");
+  li.className = "line-text";
+  li.contentEditable = true;
+  li.innerText = block.content;
+  li.oninput = () => {
+    block.content = li.innerText;
+    saveBlocks();
+  };
+  return li;
+  } else {
+    wrapper.className = "line-text";
+    wrapper.contentEditable = true;
+    wrapper.innerText = block.content;
+    wrapper.oninput = () => {
+      block.content = wrapper.innerText;
+      saveBlocks();
+    };
+  }
+
+  return wrapper;
+}
+  
+function saveBlocks() {
+  localStorage.setItem(`blocks-${currentMode}-${currentSlug}`, JSON.stringify(blocks));
+  debounceSync(); // optional, if you're syncing
 }
 
 
@@ -734,14 +789,26 @@ function loadContent(mode, slug, label, url) {
   const cached = localStorage.getItem(`bujocache-${mode}-${slug}`);
   const cachedHtml = cached ? decodeHTML(cached) : "";
   const cachedVer = extractVersion(cachedHtml);
-  smoothEntryTransition(cachedHtml.replace(/<!--.*?-->/, "") || "");
+  try {
+  const parsed = JSON.parse(decodeHTML(cached));
+  blocks = parsed;
+  blockIdCounter = blocks.length;
+  renderBlocks();
+  updateStatus("LOADED CACHED");
+} catch (e) {
+  blocks = [createBlock("text", "")];
+  renderBlocks();
+  updateStatus("EMPTY");
+}
   updateStatus(cached ? "LOADED CACHED" : "EMPTY");
 
   fetch(url).then(res => res.ok ? res.text() : null).then(remote => {
     if (!remote) return;
     const remoteVer = extractVersion(remote);
     if (remoteVer > cachedVer) {
-      smoothEntryTransition(remote.replace(/<!--.*?-->/, ""));
+      blocks = parseHTMLToBlocks(remote);
+blockIdCounter = blocks.length;
+renderBlocks();
       localStorage.setItem(`bujocache-${mode}-${slug}`, encodeHTML(remote));
       updateStatus("LOADED SYNCED");
       setTimeout(() => {
@@ -760,15 +827,84 @@ function forceCheckboxAttrs() {
   });
 }
 
+  function serializeBlocksToHTML() {
+  let html = "";
+  let listBuffer = [];
+
+  for (const block of blocks) {
+    if (block.type === "todo") {
+      const checked = block.props?.checked ? ' checked="checked"' : '';
+      html += `<div class="entry-line"><input type="checkbox"${checked}><div class="line-text" contenteditable="true">${block.content}</div></div>\n`;
+    } else if (block.type === "divider") {
+      html += `<hr>\n`;
+    } else if (block.type === "list") {
+      listBuffer.push(`<li class="line-text">${block.content}</li>`);
+    } else {
+      if (listBuffer.length) {
+        html += `<ul>\n${listBuffer.join("\n")}\n</ul>\n`;
+        listBuffer = [];
+      }
+      html += `<div class="line-text" contenteditable="true">${block.content}</div>\n`;
+    }
+  }
+
+  if (listBuffer.length) {
+    html += `<ul>\n${listBuffer.join("\n")}\n</ul>\n`;
+  }
+
+  return html;
+}
+  function parseHTMLToBlocks(html) {
+  const temp = document.createElement("div");
+  temp.innerHTML = html;
+  const parsed = [];
+
+  for (const node of temp.childNodes) {
+    if (node.nodeType === Node.COMMENT_NODE) continue;
+    if (node.nodeType !== Node.ELEMENT_NODE) continue;
+
+    if (node.tagName === "HR") {
+      parsed.push(createBlock("divider", ""));
+      continue;
+    }
+
+    // ✅ Checkbox block
+    if (node.classList.contains("entry-line")) {
+      const input = node.querySelector('input[type="checkbox"]');
+      const text = node.querySelector(".line-text")?.innerText || "";
+      parsed.push(createBlock("todo", text.trim(), { checked: input?.checked || false }));
+      continue;
+    }
+
+    // ✅ Plain text block
+    if (node.classList.contains("line-text")) {
+      parsed.push(createBlock("text", node.innerText.trim()));
+      continue;
+    }
+
+    // ✅ List item (`<ul><li class="line-text">...</li></ul>`)
+    if (node.tagName === "UL") {
+  const items = node.querySelectorAll("li.line-text");
+  items.forEach(li => {
+    parsed.push(createBlock("list", li.innerText.trim()));
+  });
+  continue;
+}
+  }
+
+  return parsed;
+}
+
+
 function saveLocal() {
   const content = document.getElementById("journal-content");
-  const html = `<!-- version:${new Date().toISOString()} -->\n${content.innerHTML}`;
+  const html = `<!-- version:${new Date().toISOString()} -->\n${serializeBlocksToHTML()}`;
   localStorage.setItem(`bujocache-${currentMode}-${currentSlug}`, encodeHTML(html));
 }
 
 function syncRemote() {
   const content = document.getElementById("journal-content");
-  const html = `<!-- version:${new Date().toISOString()} -->\n${content.innerHTML}`;
+  const html = `<!-- version:${new Date().toISOString()} -->\n${serializeBlocksToHTML()}`;
   updateStatus("SYNCING...", true);
   fetch("https://bujolebron.netlify.app/.netlify/functions/dispatch", {
     method: "POST",
@@ -784,9 +920,7 @@ function debounceSync() {
 }
 
 function saveContent() {
-  forceCheckboxAttrs();
-  saveLocal();
-  debounceSync();
+  saveBlocks();
   pushUndoState();
 }
 
@@ -1137,133 +1271,89 @@ journalContent.addEventListener("keydown", (e) => {
   const active = document.activeElement;
   if (!active || !active.isContentEditable) return;
 
-  const parent = active.closest(".entry-line") || active;
+  const parent = active.closest("[data-id]");
+  if (!parent) return;
 
-  // --- ENTER KEY ---
+  const blockId = parent.dataset.id;
+  const blockIndex = blocks.findIndex(b => b.id === blockId);
+  if (blockIndex === -1) return;
+
+  const block = blocks[blockIndex];
+  const sel = window.getSelection();
+  const caretOffset = sel?.getRangeAt(0)?.startOffset ?? 0;
+
+  // ENTER = split or insert block
   if (e.key === "Enter") {
     e.preventDefault();
 
-    const isCheckbox = parent.classList.contains("entry-line");
-    const isListItem = active.textContent.trim().startsWith('- ');
+    const text = active.innerText;
+    const before = text.slice(0, caretOffset);
+    const after = text.slice(caretOffset);
 
-    let newBlock;
-
-    if (isListItem) {
-      const ul = document.createElement('ul');
-      ul.style.margin = '0 0 14px 20px';
-      ul.style.padding = '0';
-      ul.style.listStyle = 'disc';
-
-      const li = document.createElement('li');
-      li.className = 'line-text';
-
-      const editable = document.createElement('div');
-      editable.className = 'line-text-inner';
-      editable.contentEditable = true;
-
-      li.appendChild(editable);
-      ul.appendChild(li);
-
-      journalContent.insertBefore(ul, parent.nextSibling);
-      placeCaretAtStart(editable);
-    } else {
-      newBlock = createLineBlock(isCheckbox ? "checkbox" : "text");
-      journalContent.insertBefore(newBlock, parent.nextSibling);
-      const focusTarget = newBlock.querySelector(".line-text") || newBlock;
-      placeCaretAtStart(focusTarget);
+    // If it's a todo or list and empty, convert to plain
+    if (text.trim() === "" && (block.type === "todo" || block.type === "list")) {
+      blocks[blockIndex] = createBlock("text", "");
+      renderBlocks();
+      const el = document.querySelector(`[data-id="${blocks[blockIndex].id}"]`);
+      if (el) placeCaretAtStart(el);
+      saveBlocks();
+      return;
     }
 
-    saveContent();
-    return;
-  }
-if (e.key === "Backspace") {
-  const sel = window.getSelection();
-  if (!sel.isCollapsed) return;
+    // Otherwise split
+    block.content = before;
+    const newBlock = createBlock(block.type, after);
+    blocks.splice(blockIndex + 1, 0, newBlock);
+    renderBlocks();
 
-  const range = sel.getRangeAt(0);
-  if (range.startOffset > 0) return;
-
-  const parent = active.closest(".entry-line, li.line-text, .line-text");
-  if (!parent) return;
-
-  const prev = parent.previousElementSibling;
-  const activeText = active.textContent.trim();
-
-  const isCheckboxBlock = parent.classList.contains("entry-line") && parent.querySelector('input[type="checkbox"]');
-
-  const prevEditable = prev?.querySelector("[contenteditable]") || prev;
-
-  // 🔁 Convert empty checkbox to plain text — iframe safe
-  if (activeText === "" && isCheckboxBlock) {
-    e.preventDefault();
-
-    const plain = createLineBlock("text", "");
-    journalContent.replaceChild(plain, parent);
-
-    const editable = plain.querySelector("[contenteditable]") || plain;
-
-    // ✅ Delayed focus ensures iframe + DOM reflow plays nice
-    setTimeout(() => {
-      editable.focus();
-      placeCaretAtStart(editable);
-    }, 0);
-
-    saveContent();
+    const newEl = document.querySelector(`[data-id="${newBlock.id}"]`);
+    if (newEl) placeCaretAtStart(newEl);
+    saveBlocks();
     return;
   }
 
-  // 🧹 Convert any other empty wrapped element to plain
-  if (activeText === "" && parent !== active && parent !== active.parentElement) {
+  // BACKSPACE = delete or convert
+  if (e.key === "Backspace" && caretOffset === 0) {
     e.preventDefault();
 
-    const plain = createLineBlock("text", "");
-    journalContent.replaceChild(plain, parent);
+    const prev = blocks[blockIndex - 1];
+    if (block.content === "") {
+      // Convert todo/list to plain if empty
+      if (block.type === "todo" || block.type === "list") {
+        blocks[blockIndex] = createBlock("text", "");
+        renderBlocks();
+        const el = document.querySelector(`[data-id="${blocks[blockIndex].id}"]`);
+        if (el) placeCaretAtStart(el);
+        saveBlocks();
+        return;
+      }
 
-    const editable = plain.querySelector("[contenteditable]") || plain;
-
-    setTimeout(() => {
-      editable.focus();
-      placeCaretAtStart(editable);
-    }, 0);
-
-    saveContent();
-    return;
-  }
-
-  // 🗑 Remove empty plain block
-  if (activeText === "" && parent === active) {
-    e.preventDefault();
-    parent.remove();
-
-    if (prevEditable) {
-      setTimeout(() => {
-        prevEditable.focus();
-        placeCaretAtEnd(prevEditable);
-      }, 0);
+      // If just a plain empty text block, remove it
+      blocks.splice(blockIndex, 1);
+      renderBlocks();
+      const el = document.querySelector(`[data-id="${prev?.id}"]`);
+      if (el) placeCaretAtEnd(el);
+      saveBlocks();
+      return;
     }
 
-    saveContent();
+    // Merge with previous
+    if (prev) {
+      const prevContent = prev.content;
+      prev.content += block.content;
+      blocks.splice(blockIndex, 1);
+      renderBlocks();
+      const el = document.querySelector(`[data-id="${prev.id}"]`);
+      if (el) {
+        placeCaretAtEnd(el);
+      }
+      saveBlocks();
+    }
+
     return;
   }
 
-  // ➕ Merge text into previous
-  if (activeText.length > 0 && prevEditable) {
-    e.preventDefault();
-    parent.remove();
-
-    setTimeout(() => {
-      prevEditable.focus();
-      placeCaretAtEnd(prevEditable);
-      document.execCommand("insertText", false, active.textContent);
-    }, 0);
-
-    saveContent();
-    return;
-  }
-}
-
-  
-  // --- COMMAND MODE (/)
+  // COMMAND MODE
   if (e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey) {
     isCommandMode = true;
     commandBuffer = "/";
@@ -1272,7 +1362,7 @@ if (e.key === "Backspace") {
     return;
   }
 
-  // --- ESC cancels command mode
+  // ESC exits command
   if (e.key === "Escape" && isCommandMode) {
     isCommandMode = false;
     commandBuffer = "";
@@ -1280,6 +1370,7 @@ if (e.key === "Backspace") {
     return;
   }
 });
+
   
   // ✅ Global shortcuts (moved here to fix journalContent reference error)
   document.addEventListener("keydown", (e) => {

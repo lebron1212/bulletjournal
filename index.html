@@ -946,7 +946,7 @@ function forceCheckboxAttrs() {
       listBuffer.push(`<li class="line-text">${block.content}</li>`);
     } else {
       if (listBuffer.length) {
-        html += <ul>\n${listBuffer.join("\n")}\n</ul>\n;
+        html += `<ul>\n${listBuffer.join("\n")}\n</ul>\n`;
         listBuffer = [];
       }
       html += `<div class="line-text" contenteditable="true">${block.content}</div>\n`;
